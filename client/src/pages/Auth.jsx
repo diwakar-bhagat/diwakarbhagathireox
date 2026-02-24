@@ -7,11 +7,12 @@ import { getRedirectResult, signInWithRedirect } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
 import axios from 'axios';
 import { ServerUrl } from '../App';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setUserData } from '../redux/userSlice';
 import { useLocation, useNavigate } from 'react-router-dom';
 function Auth({ isModel = false }) {
     const dispatch = useDispatch()
+    const { userData } = useSelector((state) => state.user);
     const navigate = useNavigate();
     const location = useLocation();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +31,12 @@ function Auth({ isModel = false }) {
         );
         dispatch(setUserData(result.data));
     }, [dispatch]);
+
+    useEffect(() => {
+        if (isModel) return;
+        if (!userData) return;
+        navigate(redirectPath, { replace: true });
+    }, [isModel, navigate, redirectPath, userData]);
 
     useEffect(() => {
         let active = true;
