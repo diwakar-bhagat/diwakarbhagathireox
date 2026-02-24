@@ -4,7 +4,8 @@ const resolveFirebaseWebApiKey = () => {
   const apiKey =
     process.env.FIREBASE_WEB_API_KEY ||
     process.env.FIREBASE_API_KEY ||
-    process.env.VITE_FIREBASE_APIKEY;
+    process.env.VITE_FIREBASE_APIKEY ||
+    process.env.VITE_FIREBASE_API_KEY;
 
   if (!apiKey) {
     throw new Error("Firebase Web API key is not configured.");

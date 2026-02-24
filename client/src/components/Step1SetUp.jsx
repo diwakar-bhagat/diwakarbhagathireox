@@ -40,7 +40,7 @@ function Step1SetUp({ onStart }) {
     const handleUploadResume = async () => {
         if (!resumeFile || analyzing) return;
         if (!userData && !auth.currentUser) {
-            navigate("/auth");
+            navigate("/auth", { state: { from: "/interview" } });
             return;
         }
         setAnalyzing(true)
@@ -71,7 +71,7 @@ function Step1SetUp({ onStart }) {
 
     const handleStart = async () => {
         if (!userData && !auth.currentUser) {
-            navigate("/auth");
+            navigate("/auth", { state: { from: "/interview" } });
             return;
         }
         setLoading(true)

@@ -9,9 +9,13 @@ import axios from 'axios';
 import { ServerUrl } from '../App';
 import { useDispatch } from 'react-redux';
 import { setUserData } from '../redux/userSlice';
+import { useLocation, useNavigate } from 'react-router-dom';
 function Auth({ isModel = false }) {
     const dispatch = useDispatch()
+    const navigate = useNavigate();
+    const location = useLocation();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const redirectPath = location.state?.from || "/";
 
     const completeServerAuth = useCallback(async (user) => {
         const idToken = await user.getIdToken();
@@ -36,6 +40,9 @@ function Auth({ isModel = false }) {
                 if (!redirectResult?.user || !active) return;
                 setIsSubmitting(true);
                 await completeServerAuth(redirectResult.user);
+                if (!isModel) {
+                    navigate(redirectPath, { replace: true });
+                }
             } catch (error) {
                 if (active) {
                     console.log(error);
@@ -52,7 +59,7 @@ function Auth({ isModel = false }) {
         return () => {
             active = false;
         };
-    }, [completeServerAuth, dispatch]);
+    }, [completeServerAuth, dispatch, isModel, navigate, redirectPath]);
 
     const handleGoogleAuth = async () => {
         if (isSubmitting) return;
