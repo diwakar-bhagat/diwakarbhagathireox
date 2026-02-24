@@ -1,6 +1,6 @@
 
 
-# Hireox.AI v.1
+# HireOX.AI v.1
 
 <p align="center">
   <img src="https://img.shields.io/badge/Domain-hireox.ai-black?style=for-the-badge" />
