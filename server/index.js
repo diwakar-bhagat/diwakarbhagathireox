@@ -13,7 +13,7 @@ const app = express()
 
 const normalizeOrigin = (value) => value.replace(/\/+$/, "");
 const allowedOrigins = (process.env.CLIENT_ORIGINS ||
-    "http://localhost:5173,http://127.0.0.1:5173")
+    "https://ox-client.onrender.com,http://localhost:5173,http://127.0.0.1:5173")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean)
