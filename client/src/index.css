@@ -1,0 +1,112 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+a,
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+summary,
+select,
+label[for] {
+  cursor: pointer;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #f3f3f3;
+  color: #111827;
+}
+
+html.dark body {
+  background-color: #020617;
+  color: #e2e8f0;
+}
+
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow, opacity;
+  transition-duration: 620ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bg-\[\#f3f3f3\] {
+  background-color: rgb(243 243 243 / 0.72);
+}
+
+.bg-gray-50 {
+  background-color: rgb(249 250 251 / 0.72);
+}
+
+.bg-white {
+  background-color: rgb(255 255 255 / 0.78);
+}
+
+.dark .bg-\[\#f3f3f3\] {
+  background-color: #020617;
+}
+
+.dark .bg-white {
+  background-color: rgb(15 23 42 / 0.78);
+}
+
+.dark .bg-gray-50 {
+  background-color: rgb(15 23 42 / 0.64);
+}
+
+.dark .bg-gray-100 {
+  background-color: rgb(30 41 59 / 0.7);
+}
+
+.dark .text-gray-400 {
+  color: #94a3b8;
+}
+
+.dark .text-gray-500 {
+  color: #cbd5e1;
+}
+
+.dark .text-gray-600 {
+  color: #cbd5e1;
+}
+
+.dark .text-gray-700 {
+  color: #e2e8f0;
+}
+
+.dark .text-gray-800 {
+  color: #f8fafc;
+}
+
+.dark .text-black {
+  color: #f8fafc;
+}
+
+.dark .border-gray-100 {
+  border-color: rgb(51 65 85 / 0.35);
+}
+
+.dark .border-gray-200 {
+  border-color: rgb(51 65 85 / 0.7);
+}
+
+.dark .border-gray-300 {
+  border-color: rgb(71 85 105 / 0.9);
+}
+
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  box-shadow: 0 16px 36px rgba(2, 6, 23, 0.5);
+}

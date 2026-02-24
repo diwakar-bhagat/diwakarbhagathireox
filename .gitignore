@@ -1,0 +1,12 @@
+node_modules/
+firebase/functions/node_modules/
+firebase/functions/.env
+.env
+.env.*
+!.env.example
+.DS_Store
+dist/
+build/
+.npm/
+.yarn/
+.pnp.*

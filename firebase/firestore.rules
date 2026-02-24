@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isValidEmail(email) {
+      return email is string
+        && email.size() >= 5
+        && email.size() <= 254
+        && email.matches('^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$');
+    }
+
+    function isValidSource(source) {
+      return source is string
+        && source.size() > 0
+        && source.size() <= 50;
+    }
+
+    match /newsletter_subscribers/{email} {
+      allow get: if isValidEmail(email);
+
+      allow create: if request.resource.data.keys().hasOnly([
+          "email",
+          "emailLower",
+          "source",
+          "status",
+          "createdAt"
+        ])
+        && request.resource.data.email == request.resource.data.emailLower
+        && request.resource.data.emailLower == email
+        && request.resource.data.status == "active"
+        && isValidEmail(request.resource.data.emailLower)
+        && isValidSource(request.resource.data.source)
+        && request.resource.data.createdAt == request.time;
+
+      allow list, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
