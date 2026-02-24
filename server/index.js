@@ -12,11 +12,16 @@ import oxbotRouter from "./routes/oxbot.route.js"
 const app = express()
 
 const normalizeOrigin = (value) => value.replace(/\/+$/, "");
-const allowedOrigins = (process.env.CLIENT_ORIGINS ||
-    "https://ox-client.onrender.com,http://localhost:5173,http://127.0.0.1:5173")
+const defaultOrigins = [
+    "https://ox-client.onrender.com",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+];
+const configuredOrigins = (process.env.CLIENT_ORIGINS || "")
     .split(",")
     .map((origin) => origin.trim())
-    .filter(Boolean)
+    .filter(Boolean);
+const allowedOrigins = [...new Set([...defaultOrigins, ...configuredOrigins])]
     .map((origin) => normalizeOrigin(origin));
 const allowedOriginSet = new Set(allowedOrigins);
 
@@ -39,7 +44,7 @@ app.use(cors({
             callback(null, true);
             return;
         }
-        callback(new Error("Not allowed by CORS"));
+        callback(new Error(`Not allowed by CORS: ${origin}`));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -58,6 +63,10 @@ app.use((err, req, res, next) => {
     if (!err) {
         next();
         return;
+    }
+
+    if (typeof err?.message === "string" && err.message.startsWith("Not allowed by CORS")) {
+        return res.status(403).json({ message: "Not allowed by CORS" });
     }
 
     if (err?.name === "MulterError") {

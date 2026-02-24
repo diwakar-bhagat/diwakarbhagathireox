@@ -1,9 +1,9 @@
-import React from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { BsRobot } from "react-icons/bs";
 import { IoSparkles } from "react-icons/io5";
 import { motion as Motion } from "motion/react"
 import { FcGoogle } from "react-icons/fc";
-import { signInWithPopup } from 'firebase/auth';
+import { getRedirectResult, signInWithRedirect } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
 import axios from 'axios';
 import { ServerUrl } from '../App';
@@ -11,27 +11,59 @@ import { useDispatch } from 'react-redux';
 import { setUserData } from '../redux/userSlice';
 function Auth({ isModel = false }) {
     const dispatch = useDispatch()
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const completeServerAuth = useCallback(async (user) => {
+        const idToken = await user.getIdToken();
+        const result = await axios.post(
+            ServerUrl + "/api/auth/google",
+            {
+                idToken,
+                name: user.displayName || "",
+                email: user.email || "",
+            },
+            { withCredentials: true }
+        );
+        dispatch(setUserData(result.data));
+    }, [dispatch]);
+
+    useEffect(() => {
+        let active = true;
+
+        const resolveRedirectLogin = async () => {
+            try {
+                const redirectResult = await getRedirectResult(auth);
+                if (!redirectResult?.user || !active) return;
+                setIsSubmitting(true);
+                await completeServerAuth(redirectResult.user);
+            } catch (error) {
+                if (active) {
+                    console.log(error);
+                    dispatch(setUserData(null));
+                }
+            } finally {
+                if (active) {
+                    setIsSubmitting(false);
+                }
+            }
+        };
+
+        resolveRedirectLogin();
+        return () => {
+            active = false;
+        };
+    }, [completeServerAuth, dispatch]);
 
     const handleGoogleAuth = async () => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
-            const response = await signInWithPopup(auth, provider)
-            let User = response.user
-            let name = User.displayName
-            let email = User.email
-            const idToken = await User.getIdToken()
-            const result = await axios.post(
-                ServerUrl + "/api/auth/google",
-                { idToken, name, email },
-                { withCredentials: true }
-            )
-            dispatch(setUserData(result.data))
-
-
-
-
+            await signInWithRedirect(auth, provider);
         } catch (error) {
-            console.log(error)
-            dispatch(setUserData(null))
+            console.log(error);
+            dispatch(setUserData(null));
+        } finally {
+            setIsSubmitting(false);
         }
     }
     return (
@@ -73,11 +105,12 @@ function Auth({ isModel = false }) {
 
                 <Motion.button
                     onClick={handleGoogleAuth}
+                    disabled={isSubmitting}
                     whileHover={{ opacity: 0.9, scale: 1.03 }}
                     whileTap={{ opacity: 1, scale: 0.98 }}
-                    className='w-full flex items-center justify-center gap-3 py-3 bg-black text-white rounded-full shadow-md '>
+                    className='w-full flex items-center justify-center gap-3 py-3 bg-black text-white rounded-full shadow-md disabled:opacity-70 disabled:cursor-not-allowed'>
                     <FcGoogle size={20} />
-                    Continue with Google
+                    {isSubmitting ? "Please wait..." : "Continue with Google"}
 
 
                 </Motion.button>

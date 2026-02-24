@@ -13,9 +13,12 @@ import { ServerUrl } from '../App';
 import { useDispatch, useSelector } from 'react-redux';
 import { setUserData } from '../redux/userSlice';
 import { setResumeParsing } from '../redux/uiSlice';
+import { useNavigate } from 'react-router-dom';
+import { auth } from '../utils/firebase';
 function Step1SetUp({ onStart }) {
     const { userData } = useSelector((state) => state.user)
     const dispatch = useDispatch()
+    const navigate = useNavigate();
     const [role, setRole] = useState("");
     const [experience, setExperience] = useState("");
     const [mode, setMode] = useState("Technical");
@@ -36,6 +39,10 @@ function Step1SetUp({ onStart }) {
 
     const handleUploadResume = async () => {
         if (!resumeFile || analyzing) return;
+        if (!userData && !auth.currentUser) {
+            navigate("/auth");
+            return;
+        }
         setAnalyzing(true)
         dispatch(setResumeParsing(true))
 
@@ -63,6 +70,10 @@ function Step1SetUp({ onStart }) {
     }
 
     const handleStart = async () => {
+        if (!userData && !auth.currentUser) {
+            navigate("/auth");
+            return;
+        }
         setLoading(true)
         try {
             const result = await axios.post(ServerUrl + "/api/interview/generate-questions", { role, experience, mode, resumeText, projects, skills }, { withCredentials: true })
