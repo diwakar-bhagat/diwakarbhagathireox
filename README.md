@@ -1,6 +1,6 @@
 
 
-# HireOX.AI v.1
+# HireOX.AI BY Excommunicado
 
 <p align="center">
   <img src="https://img.shields.io/badge/Domain-hireox.ai-black?style=for-the-badge" />
@@ -44,8 +44,8 @@ Upload your resume, select a target role, and experience an AI interviewer that 
 Clone the repository and install dependencies.
 
 ```bash
-git clone https://github.com/yourusername/HireOX.AI.git
-cd HireOX.AI
+git clone https://github.com/yourusername/diwakarbhagathireox.git
+cd diwakarbhagathireox
 npm install
 ```
 
@@ -160,8 +160,8 @@ dist
 
 Recommended platforms:
 
-* Vercel
-* Netlify
+* Render
+* AWS + Kubernetes
 
 Custom domain:
 
