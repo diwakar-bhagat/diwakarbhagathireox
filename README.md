@@ -44,8 +44,8 @@ Upload your resume, select a target role, and experience an AI interviewer that 
 Clone the repository and install dependencies.
 
 ```bash
-git clone https://github.com/yourusername/hireox-ai.git
-cd hireox-ai
+git clone https://github.com/yourusername/HireOX.AI.git
+cd HireOX.AI
 npm install
 ```
 
