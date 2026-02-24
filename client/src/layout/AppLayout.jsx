@@ -1,18 +1,28 @@
 import React from "react";
-import { motion } from "motion/react";
+import { useSelector } from "react-redux";
 import GlobalGridBackground from "../components/GlobalGridBackground";
+import AppPreloader from "../components/loaders/AppPreloader";
+import ResumeParsingOverlay from "../components/loaders/ResumeParsingOverlay";
+import PaymentProcessingOverlay from "../components/loaders/PaymentProcessingOverlay";
+import NetworkStatusPill from "../components/loaders/NetworkStatusPill";
+import OXbot from "../components/OXbot";
 
 const AppLayout = ({ children, isDimmed = false }) => {
+  const { resumeParsing, paymentProcessing, appBooting } = useSelector(
+    (state) => state.ui
+  );
+  const hasOverlay = resumeParsing || paymentProcessing.status !== "idle";
+  const backgroundDimmed = isDimmed || hasOverlay || appBooting;
+
   return (
     <>
-      <GlobalGridBackground isDimmed={isDimmed} />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4 }}
-      >
-        {children}
-      </motion.div>
+      <GlobalGridBackground isDimmed={backgroundDimmed} />
+      {children}
+      <NetworkStatusPill />
+      <ResumeParsingOverlay />
+      <PaymentProcessingOverlay />
+      <AppPreloader />
+      <OXbot />
     </>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { motion } from "motion/react";
+import { motion as Motion } from "motion/react";
 import { BsCoin, BsRobot } from "react-icons/bs";
 import { FaUserAstronaut } from "react-icons/fa";
 import { HiOutlineLogout } from "react-icons/hi";
@@ -57,7 +57,7 @@ function Navbar() {
   return (
     <>
       <div className="fixed inset-x-0 top-0 z-[80] bg-[#f3f3f3]/70 dark:bg-slate-950/70 backdrop-blur-sm flex justify-center px-3 sm:px-4 pt-4 sm:pt-6">
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: -32 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: "easeOut" }}
@@ -155,7 +155,7 @@ function Navbar() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </Motion.div>
       </div>
 
       <div aria-hidden className="h-[90px] sm:h-[104px] lg:h-[112px]" />

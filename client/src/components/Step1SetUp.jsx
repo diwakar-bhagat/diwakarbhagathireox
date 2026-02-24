@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from "motion/react"
+import { motion as Motion } from "motion/react"
 import {
     FaUserTie,
     FaBriefcase,
@@ -7,11 +7,12 @@ import {
     FaMicrophoneAlt,
     FaChartLine,
 } from "react-icons/fa";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from "axios"
 import { ServerUrl } from '../App';
 import { useDispatch, useSelector } from 'react-redux';
 import { setUserData } from '../redux/userSlice';
+import { setResumeParsing } from '../redux/uiSlice';
 function Step1SetUp({ onStart }) {
     const { userData } = useSelector((state) => state.user)
     const dispatch = useDispatch()
@@ -26,10 +27,17 @@ function Step1SetUp({ onStart }) {
     const [analysisDone, setAnalysisDone] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
 
+    useEffect(() => {
+        return () => {
+            dispatch(setResumeParsing(false))
+        }
+    }, [dispatch])
+
 
     const handleUploadResume = async () => {
         if (!resumeFile || analyzing) return;
         setAnalyzing(true)
+        dispatch(setResumeParsing(true))
 
         const formdata = new FormData()
         formdata.append("resume", resumeFile)
@@ -46,11 +54,11 @@ function Step1SetUp({ onStart }) {
             setResumeText(result.data.resumeText || "");
             setAnalysisDone(true);
 
-            setAnalyzing(false);
-
         } catch (error) {
             console.log(error)
+        } finally {
             setAnalyzing(false);
+            dispatch(setResumeParsing(false))
         }
     }
 
@@ -71,7 +79,7 @@ function Step1SetUp({ onStart }) {
         }
     }
     return (
-        <motion.div
+        <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
@@ -79,7 +87,7 @@ function Step1SetUp({ onStart }) {
 
             <div className='w-full max-w-6xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl grid md:grid-cols-2 overflow-hidden border border-gray-100 dark:border-slate-800'>
 
-                <motion.div
+                <Motion.div
                     initial={{ x: -80, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ duration: 0.7 }}
@@ -111,7 +119,7 @@ function Step1SetUp({ onStart }) {
                                     text: "Performance Analytics",
                                 },
                             ].map((item, index) => (
-                                <motion.div key={index}
+                                <Motion.div key={index}
                                     initial={{ y: 30, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
                                     transition={{ delay: 0.3 + index * 0.15 }}
@@ -120,18 +128,18 @@ function Step1SetUp({ onStart }) {
                                     {item.icon}
                                     <span className='text-gray-700 dark:text-gray-200 font-medium'>{item.text}</span>
 
-                                </motion.div>
+                                </Motion.div>
                             ))
                         }
                     </div>
 
 
 
-                </motion.div>
+                </Motion.div>
 
 
 
-                <motion.div
+                <Motion.div
                     initial={{ x: 80, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ duration: 0.7 }}
@@ -174,7 +182,7 @@ function Step1SetUp({ onStart }) {
                         </select>
 
                         {!analysisDone && (
-                            <motion.div
+                            <Motion.div
                                 whileHover={{ scale: 1.02 }}
                                 onClick={() => document.getElementById("resumeUpload").click()}
                                 className='border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-8 text-center cursor-pointer hover:border-green-500 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/10 transition'>
@@ -192,7 +200,7 @@ function Step1SetUp({ onStart }) {
                                 </p>
 
                                 {resumeFile && (
-                                    <motion.button
+                                    <Motion.button
                                         whileHover={{ scale: 1.02 }}
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -204,15 +212,15 @@ function Step1SetUp({ onStart }) {
 
 
 
-                                    </motion.button>)}
+                                    </Motion.button>)}
 
-                            </motion.div>
+                            </Motion.div>
 
 
                         )}
 
                         {analysisDone && (
-                            <motion.div
+                            <Motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className='bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl p-5 space-y-4'>
@@ -245,11 +253,11 @@ function Step1SetUp({ onStart }) {
                                     </div>
                                 )}
 
-                            </motion.div>
+                            </Motion.div>
                         )}
 
 
-                        <motion.button
+                        <Motion.button
                             onClick={handleStart}
                             disabled={!role || !experience || loading}
                             whileHover={{ scale: 1.03 }}
@@ -258,13 +266,13 @@ function Step1SetUp({ onStart }) {
                             {loading ? "Staring..." : "Start Interview"}
 
 
-                        </motion.button>
+                        </Motion.button>
                     </div>
 
-                </motion.div>
+                </Motion.div>
             </div>
 
-        </motion.div>
+        </Motion.div>
     )
 }
 

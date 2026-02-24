@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom'
 import axios from "axios"
 import { ServerUrl } from '../App';
 import Step3Report from '../components/Step3Report';
+import Skeleton from '../components/loaders/Skeleton';
+import ChartBarsSkeleton from '../components/loaders/ChartBarsSkeleton';
 function InterviewReport() {
   const {id} = useParams()
   const [report,setReport] = useState(null);
@@ -20,15 +22,53 @@ function InterviewReport() {
     }
 
     fetchReport()
-  },[])
+  },[id])
 
 
     if (!report) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500 text-lg">
-          Loading Report...
-        </p>
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-emerald-50 dark:from-slate-950 dark:to-slate-900 py-10 px-4 sm:px-6 lg:px-10">
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="space-y-3">
+            <Skeleton width="36%" height={24} rounded="rounded-xl" />
+            <Skeleton width="52%" />
+          </div>
+
+          <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8'>
+            <div className='space-y-6'>
+              <div className='bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-slate-800 space-y-4'>
+                <Skeleton variant='card' height={120} rounded="rounded-xl" />
+                <Skeleton width="70%" />
+                <Skeleton width="55%" />
+              </div>
+              <div className='bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-slate-800 space-y-3'>
+                <Skeleton width="40%" />
+                <Skeleton width="100%" />
+                <Skeleton width="90%" />
+                <Skeleton width="96%" />
+              </div>
+            </div>
+
+            <div className='lg:col-span-2 space-y-6'>
+              <div className='bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-8 border border-gray-200 dark:border-slate-800'>
+                <Skeleton width="32%" className="mb-4" />
+                <div className='h-64 sm:h-72 w-full'>
+                  <ChartBarsSkeleton />
+                </div>
+              </div>
+              <div className='bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-8 border border-gray-200 dark:border-slate-800 space-y-4'>
+                {[0, 1, 2].map((item) => (
+                  <div key={item} className='rounded-xl p-4 border border-gray-200 dark:border-slate-700 space-y-3'>
+                    <Skeleton width="65%" />
+                    <Skeleton width="100%" />
+                    <Skeleton width="94%" />
+                    <Skeleton width="84%" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

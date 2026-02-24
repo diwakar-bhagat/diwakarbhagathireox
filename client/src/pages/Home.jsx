@@ -1,7 +1,7 @@
 import React from 'react'
 import Navbar from '../components/Navbar'
 import { useSelector } from 'react-redux'
-import { motion } from "motion/react";
+import { motion as Motion } from "motion/react";
 import {
   BsRobot,
   BsMic,
@@ -44,7 +44,7 @@ function Home() {
 
           </div>
           <div className='text-center mb-28'>
-            <motion.h1
+            <Motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -59,9 +59,9 @@ function Home() {
 
 
 
-            </motion.h1>
+            </Motion.h1>
 
-            <motion.p
+            <Motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8 }}
@@ -69,10 +69,10 @@ function Home() {
               Role-based mock interviews with smart follow-ups,
               adaptive difficulty and real-time performance evaluation.
 
-            </motion.p>
+            </Motion.p>
 
             <div className='flex flex-wrap justify-center gap-4 mt-10'>
-              <motion.button
+              <Motion.button
                 onClick={() => {
                   if (!userData) {
                     setShowAuth(true)
@@ -85,9 +85,9 @@ function Home() {
                 className='bg-black text-white px-10 py-3 rounded-full hover:opacity-90 transition shadow-md'>
                 Start Interview
 
-              </motion.button>
+              </Motion.button>
 
-              <motion.button
+              <Motion.button
                 onClick={() => {
                   if (!userData) {
                     setShowAuth(true)
@@ -100,7 +100,7 @@ function Home() {
                 className='border border-gray-300 px-10 py-3 rounded-full hover:bg-gray-100 transition'>
                 View History
 
-              </motion.button>
+              </Motion.button>
             </div>
           </div>
 
@@ -126,7 +126,7 @@ function Home() {
                   desc: "Real interview pressure with time tracking."
                 }
               ].map((item, index) => (
-                <motion.div key={index}
+                <Motion.div key={index}
                   initial={{ opacity: 0, y: 60 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6 + index * 0.2 }}
@@ -150,14 +150,14 @@ function Home() {
                   </div>
 
 
-                </motion.div>
+                </Motion.div>
               ))
             }
           </div>
 
 
           <div className='mb-32'>
-            <motion.h2
+            <Motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -165,7 +165,7 @@ function Home() {
               Advanced AI{" "}
               <span className="text-green-600">Capabilities</span>
 
-            </motion.h2>
+            </Motion.h2>
 
             <div className='grid md:grid-cols-2 gap-10'>
               {
@@ -195,7 +195,7 @@ function Home() {
                     desc: "Track progress with performance graphs and topic analysis."
                   }
                 ].map((item, index) => (
-                  <motion.div key={index}
+                  <Motion.div key={index}
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -217,7 +217,7 @@ function Home() {
                     </div>
 
 
-                  </motion.div>
+                  </Motion.div>
                 ))
               }
             </div>
@@ -226,7 +226,7 @@ function Home() {
           </div>
 
           <div className='mb-32'>
-            <motion.h2
+            <Motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -234,7 +234,7 @@ function Home() {
               Multiple Interview{" "}
               <span className="text-green-600">Modes</span>
 
-            </motion.h2>
+            </Motion.h2>
 
             <div className='grid md:grid-cols-2 gap-10'>
               {
@@ -261,7 +261,7 @@ function Home() {
                     desc: "Unlock premium interview sessions easily."
                   }
                 ].map((mode, index) => (
-                  <motion.div key={index}
+                  <Motion.div key={index}
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -293,7 +293,7 @@ function Home() {
                     </div>
 
 
-                  </motion.div>
+                  </Motion.div>
                 ))
               }
             </div>

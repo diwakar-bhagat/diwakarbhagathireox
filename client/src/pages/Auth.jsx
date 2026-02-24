@@ -1,7 +1,7 @@
 import React from 'react'
 import { BsRobot } from "react-icons/bs";
 import { IoSparkles } from "react-icons/io5";
-import { motion } from "motion/react"
+import { motion as Motion } from "motion/react"
 import { FcGoogle } from "react-icons/fc";
 import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
@@ -39,7 +39,7 @@ function Auth({ isModel = false }) {
       w-full 
       ${isModel ? "py-4" : "min-h-screen bg-[#f3f3f3] flex items-center justify-center px-6 py-20"}
     `}>
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: -40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.05 }}
@@ -71,7 +71,7 @@ function Auth({ isModel = false }) {
                 </p>
 
 
-                <motion.button
+                <Motion.button
                     onClick={handleGoogleAuth}
                     whileHover={{ opacity: 0.9, scale: 1.03 }}
                     whileTap={{ opacity: 1, scale: 0.98 }}
@@ -80,8 +80,8 @@ function Auth({ isModel = false }) {
                     Continue with Google
 
 
-                </motion.button>
-            </motion.div>
+                </Motion.button>
+            </Motion.div>
 
 
         </div>

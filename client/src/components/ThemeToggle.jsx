@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion as Motion } from "motion/react";
 
 const THEME_KEY = "theme";
 
@@ -61,7 +61,7 @@ function ThemeToggle() {
         className="group relative flex h-11 w-20 sm:h-12 sm:w-24 items-center rounded-full p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 dark:focus-visible:ring-indigo-400/70"
       >
         <div className="absolute inset-0 overflow-hidden rounded-full border border-white/30 bg-white/20 backdrop-blur-xl shadow-[0_8px_30px_rgba(15,23,42,0.15)] dark:border-white/10 dark:bg-white/10">
-          <motion.div
+          <Motion.div
             className="absolute inset-0"
             style={{
               background:
@@ -70,7 +70,7 @@ function ThemeToggle() {
             animate={{ opacity: isDark ? 0 : 1 }}
             transition={{ duration: 0.6, ease: "easeInOut" }}
           />
-          <motion.div
+          <Motion.div
             className="absolute inset-0"
             style={{
               background:
@@ -79,7 +79,7 @@ function ThemeToggle() {
             animate={{ opacity: isDark ? 1 : 0 }}
             transition={{ duration: 0.6, ease: "easeInOut" }}
           />
-          <motion.div
+          <Motion.div
             className="absolute -inset-x-8 -inset-y-6"
             style={{
               background: isDark
@@ -94,7 +94,7 @@ function ThemeToggle() {
           />
         </div>
 
-        <motion.div
+        <Motion.div
           className="pointer-events-none absolute top-1/2 h-16 w-16 sm:h-20 sm:w-20 -translate-y-1/2 rounded-full blur-2xl"
           style={{
             background: isDark
@@ -105,13 +105,13 @@ function ThemeToggle() {
           transition={{ duration: 0.55, ease: "easeInOut" }}
         />
 
-        <motion.div
+        <Motion.div
           className="relative z-10 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/60 bg-white/85 shadow-[0_8px_16px_rgba(15,23,42,0.2)] backdrop-blur-md dark:border-white/20 dark:bg-slate-900/85"
           animate={{ x: isDark ? 34 : 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           <AnimatePresence mode="wait" initial={false}>
-            <motion.div
+            <Motion.div
               key={isDark ? "moon" : "sun"}
               initial={{ rotate: isDark ? -90 : 90, scale: 0.7, opacity: 0 }}
               animate={{ rotate: 0, scale: 1, opacity: 1 }}
@@ -120,9 +120,9 @@ function ThemeToggle() {
               className={isDark ? "text-indigo-200" : "text-amber-500"}
             >
               {isDark ? <MoonIcon /> : <SunIcon />}
-            </motion.div>
+            </Motion.div>
           </AnimatePresence>
-        </motion.div>
+        </Motion.div>
       </button>
     </div>
   );

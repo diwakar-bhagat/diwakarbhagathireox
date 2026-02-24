@@ -1,16 +1,23 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { FaArrowLeft, FaCheckCircle } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
-import { motion } from "motion/react";
+import { motion as Motion } from "motion/react";
 import axios from 'axios';
 import { ServerUrl } from '../App';
 import { useDispatch } from 'react-redux';
 import { setUserData } from '../redux/userSlice';
+import { clearPaymentProcessing, setPaymentProcessing } from '../redux/uiSlice';
 function Pricing() {
   const navigate = useNavigate()
   const [selectedPlan, setSelectedPlan] = useState("free");
   const [loadingPlan, setLoadingPlan] = useState(null);
   const dispatch = useDispatch()
+
+  useEffect(() => {
+    return () => {
+      dispatch(clearPaymentProcessing())
+    }
+  }, [dispatch])
 
   const plans = [
     {
@@ -61,6 +68,7 @@ function Pricing() {
   const handlePayment = async (plan) => {
     try {
       setLoadingPlan(plan.id)
+      dispatch(setPaymentProcessing({ status: "processing" }))
 
       const amount =
         plan.id === "basic" ? 100 :
@@ -82,12 +90,25 @@ function Pricing() {
         order_id: result.data.id,
 
         handler: async function (response) {
-          const verifypay = await axios.post(ServerUrl + "/api/payment/verify", response, { withCredentials: true })
-          dispatch(setUserData(verifypay.data.user))
-
-          alert("Payment Successful 🎉 Credits Added!");
-          navigate("/")
-
+          try {
+            const verifypay = await axios.post(ServerUrl + "/api/payment/verify", response, { withCredentials: true })
+            dispatch(setUserData(verifypay.data.user))
+            dispatch(setPaymentProcessing({ status: "success" }))
+            setLoadingPlan(null);
+            window.setTimeout(() => {
+              navigate("/")
+            }, 320);
+          } catch (error) {
+            console.log(error);
+            dispatch(setPaymentProcessing({ status: "error", message: "Unable to verify payment." }))
+            setLoadingPlan(null);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            dispatch(setPaymentProcessing({ status: "error", message: "Payment window was closed." }))
+            setLoadingPlan(null);
+          },
         },
         theme: {
           color: "#10b981",
@@ -96,11 +117,14 @@ function Pricing() {
       }
 
       const rzp = new window.Razorpay(options)
+      rzp.on("payment.failed", () => {
+        dispatch(setPaymentProcessing({ status: "error", message: "Transaction failed." }))
+        setLoadingPlan(null);
+      });
       rzp.open()
-
-      setLoadingPlan(null);
     } catch (error) {
       console.log(error)
+      dispatch(setPaymentProcessing({ status: "error", message: "Could not start payment." }))
       setLoadingPlan(null);
     }
   }
@@ -133,7 +157,7 @@ function Pricing() {
           const isSelected = selectedPlan === plan.id
 
           return (
-            <motion.div key={plan.id}
+            <Motion.div key={plan.id}
               whileHover={!plan.default && { scale: 1.03 }}
               onClick={() => !plan.default && setSelectedPlan(plan.id)}
 
@@ -214,7 +238,7 @@ function Pricing() {
 
                 </button>
               }
-            </motion.div>
+            </Motion.div>
           )
         })}
       </div>

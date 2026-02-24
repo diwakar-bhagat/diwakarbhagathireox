@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { motion } from "motion/react"
+import { motion as Motion } from "motion/react"
 import { buildStyles, CircularProgressbar } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import ChartBarsSkeleton from './loaders/ChartBarsSkeleton';
 
 function Step3Report({ report }) {
   const navigate = useNavigate()
@@ -238,7 +239,7 @@ function Step3Report({ report }) {
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8'>
 
         <div className='space-y-6'>
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-6 sm:p-8 text-center transition-colors">
@@ -272,9 +273,9 @@ function Step3Report({ report }) {
                 {shortTagline}
               </p>
             </div>
-          </motion.div>
+          </Motion.div>
 
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-6 sm:p-8 transition-colors'>
@@ -306,14 +307,14 @@ function Step3Report({ report }) {
               }
             </div>
 
-          </motion.div>
+          </Motion.div>
 
 
         </div>
 
         <div className='lg:col-span-2 space-y-6'>
 
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-5 sm:p-8 transition-colors min-h-0'>
@@ -322,7 +323,7 @@ function Step3Report({ report }) {
             </h3>
 
             <div ref={chartContainerRef} className='h-64 sm:h-72 w-full min-w-0'>
-              {chartSize.width > 0 && chartSize.height > 0 && (
+              {chartSize.width > 0 && chartSize.height > 0 ? (
                 <AreaChart width={chartSize.width} height={chartSize.height} data={questionScoreData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:opacity-10" />
                   <XAxis dataKey="name" stroke="currentColor" className="text-gray-400 dark:text-gray-600" />
@@ -338,13 +339,15 @@ function Step3Report({ report }) {
                     fillOpacity={0.4}
                     strokeWidth={3} />
                 </AreaChart>
+              ) : (
+                <ChartBarsSkeleton />
               )}
             </div>
 
 
-          </motion.div>
+          </Motion.div>
 
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-5 sm:p-8 transition-colors'>
@@ -388,7 +391,7 @@ function Step3Report({ report }) {
               ))}
             </div>
 
-          </motion.div>
+          </Motion.div>
 
 
 

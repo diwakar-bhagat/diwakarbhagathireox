@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import axios from "axios"
 import { ServerUrl } from '../App'
 import { FaArrowLeft } from 'react-icons/fa'
+import { motion as Motion } from "motion/react"
+import Skeleton from '../components/loaders/Skeleton'
 function InterviewHistory() {
     const [interviews, setInterviews] = useState([])
+    const [loading, setLoading] = useState(true)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -16,6 +19,8 @@ function InterviewHistory() {
 
             } catch (error) {
                 console.log(error)
+            } finally {
+                setLoading(false)
             }
 
         }
@@ -48,7 +53,24 @@ function InterviewHistory() {
                 </div>
 
 
-                {interviews.length === 0 ?
+                {loading ? (
+                    <div className='grid gap-6'>
+                        {[0, 1, 2].map((item) => (
+                            <div
+                                key={item}
+                                className='bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-md border border-gray-100 dark:border-slate-800 space-y-4'
+                            >
+                                <Skeleton width="34%" height={18} />
+                                <Skeleton width="52%" />
+                                <Skeleton width="24%" />
+                                <div className='flex justify-between items-center pt-2'>
+                                    <Skeleton width={90} height={24} rounded="rounded-full" />
+                                    <Skeleton width={82} height={24} rounded="rounded-full" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : interviews.length === 0 ?
                     <div className='bg-white dark:bg-slate-900 p-10 rounded-2xl shadow dark:shadow-slate-950/40 text-center border border-transparent dark:border-slate-800 transition-colors'>
                         <p className='text-gray-500 dark:text-gray-400'>
                             No interviews found. Start your first interview.
@@ -60,7 +82,10 @@ function InterviewHistory() {
 
                     <div className='grid gap-6'>
                         {interviews.map((item, index) => (
-                            <div key={index}
+                            <Motion.div key={index}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.35, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
                                 onClick={() => navigate(`/report/${item._id}`)}
                                 className='bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-md dark:shadow-slate-950/40 hover:shadow-xl dark:hover:shadow-emerald-950/20 transition-all duration-300 cursor-pointer border border-gray-100 dark:border-slate-800'>
                                 <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
@@ -104,7 +129,7 @@ function InterviewHistory() {
                                     </div>
                                 </div>
 
-                            </div>
+                            </Motion.div>
 
                         ))
                         }
