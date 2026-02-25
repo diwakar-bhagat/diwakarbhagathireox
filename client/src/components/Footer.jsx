@@ -8,6 +8,7 @@ function Footer() {
     { name: "Vansh Harit", href: "https://www.linkedin.com/in/vansh-harit-5590512b2?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
     { name: "Garv Kathuria", href: "https://www.linkedin.com/in/garv-kathuria-a510503a9?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
     { name: "Diwakar Bhagat", href: "https://www.linkedin.com/in/diwakarbhagat/" },
+    { name: "Karan Shakya", href: "https://www.linkedin.com/in/karan-995280330?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
   ]
 
   const [email, setEmail] = useState("")
@@ -78,10 +79,10 @@ function Footer() {
         {statusMessage && (
           <p
             className={`text-center text-sm mt-3 ${statusType === "error"
-                ? "text-red-600"
-                : statusType === "success"
-                  ? "text-emerald-600"
-                  : "text-gray-600"
+              ? "text-red-600"
+              : statusType === "success"
+                ? "text-emerald-600"
+                : "text-gray-600"
               }`}
           >
             {statusMessage}
@@ -93,7 +94,7 @@ function Footer() {
 
           <p className='text-xs sm:text-sm'>Cooked By Excommunicado.</p>
 
-          <div className='mx-auto grid w-full max-w-3xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs sm:text-sm'>
+          <div className='mx-auto flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-xs sm:text-sm w-full max-w-4xl'>
             {creators.map((creator) => (
               <a
                 key={creator.name}
