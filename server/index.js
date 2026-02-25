@@ -13,6 +13,8 @@ const app = express()
 
 const normalizeOrigin = (value) => value.replace(/\/+$/, "");
 const defaultOrigins = [
+    "https://hireox.in",
+    "https://www.hireox.in",
     "https://ox-client.onrender.com",
     "https://diwakarbhagathireox.onrender.com",
     "https://diwakarbhagatbuildx-client.onrender.com",
