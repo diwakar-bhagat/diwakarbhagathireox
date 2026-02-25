@@ -5,7 +5,7 @@ import { subscribeToNewsletter } from '../services/newsletter'
 function Footer() {
   const creators = [
     { name: "Gautam Sharma", href: "https://www.linkedin.com/in/gautam-sharma-188516330?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
-    { name: "Vansh Harit", href: "https://www.linkedin.com/in/vansh-harit-5590512b2?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"},
+    { name: "Vansh Harit", href: "https://www.linkedin.com/in/vansh-harit-5590512b2?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
     { name: "Garv Kathuria", href: "https://www.linkedin.com/in/garv-kathuria-a510503a9?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
     { name: "Diwakar Bhagat", href: "https://www.linkedin.com/in/diwakarbhagat/" },
   ]

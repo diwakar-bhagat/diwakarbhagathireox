@@ -1,72 +1,25 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { BsRobot } from "react-icons/bs";
 import { IoSparkles } from "react-icons/io5";
 import { motion as Motion } from "motion/react"
 import { FcGoogle } from "react-icons/fc";
-import { getRedirectResult, signInWithRedirect } from 'firebase/auth';
+import { signInWithRedirect } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
-import axios from 'axios';
-import { ServerUrl } from '../App';
-import { useDispatch, useSelector } from 'react-redux';
-import { setUserData } from '../redux/userSlice';
+import { useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
+
 function Auth({ isModel = false }) {
-    const dispatch = useDispatch()
     const { userData } = useSelector((state) => state.user);
     const navigate = useNavigate();
     const location = useLocation();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const redirectPath = location.state?.from || "/";
 
-    const completeServerAuth = useCallback(async (user) => {
-        const idToken = await user.getIdToken();
-        const result = await axios.post(
-            ServerUrl + "/api/auth/google",
-            {
-                idToken,
-                name: user.displayName || "",
-                email: user.email || "",
-            },
-            { withCredentials: true }
-        );
-        dispatch(setUserData(result.data));
-    }, [dispatch]);
-
     useEffect(() => {
         if (isModel) return;
         if (!userData) return;
         navigate(redirectPath, { replace: true });
-    }, [isModel, navigate, redirectPath, userData]);
-
-    useEffect(() => {
-        let active = true;
-
-        const resolveRedirectLogin = async () => {
-            try {
-                const redirectResult = await getRedirectResult(auth);
-                if (!redirectResult?.user || !active) return;
-                setIsSubmitting(true);
-                await completeServerAuth(redirectResult.user);
-                if (!isModel) {
-                    navigate(redirectPath, { replace: true });
-                }
-            } catch (error) {
-                if (active) {
-                    console.log(error);
-                    dispatch(setUserData(null));
-                }
-            } finally {
-                if (active) {
-                    setIsSubmitting(false);
-                }
-            }
-        };
-
-        resolveRedirectLogin();
-        return () => {
-            active = false;
-        };
-    }, [completeServerAuth, dispatch, isModel, navigate, redirectPath]);
+    }, [isModel, userData, navigate, redirectPath]);
 
     const handleGoogleAuth = async () => {
         if (isSubmitting) return;
@@ -75,7 +28,6 @@ function Auth({ isModel = false }) {
             await signInWithRedirect(auth, provider);
         } catch (error) {
             console.log(error);
-            dispatch(setUserData(null));
         } finally {
             setIsSubmitting(false);
         }
