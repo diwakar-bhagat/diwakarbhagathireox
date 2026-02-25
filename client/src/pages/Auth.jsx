@@ -3,12 +3,16 @@ import { BsRobot } from "react-icons/bs";
 import { IoSparkles } from "react-icons/io5";
 import { motion as Motion } from "motion/react"
 import { FcGoogle } from "react-icons/fc";
-import { signInWithRedirect } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
-import { useSelector } from 'react-redux';
+import axios from 'axios';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUserData } from '../redux/userSlice';
+import { ServerUrl } from '../App';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 function Auth({ isModel = false }) {
+    const dispatch = useDispatch();
     const { userData } = useSelector((state) => state.user);
     const navigate = useNavigate();
     const location = useLocation();
@@ -25,9 +29,43 @@ function Auth({ isModel = false }) {
         if (isSubmitting) return;
         setIsSubmitting(true);
         try {
-            await signInWithRedirect(auth, provider);
+            const result = await signInWithPopup(auth, provider);
+            const user = result?.user;
+            if (!user) {
+                throw new Error("Google login failed");
+            }
+
+            const idToken = await user.getIdToken();
+            const response = await axios.post(
+                ServerUrl + "/api/auth/google",
+                {
+                    idToken,
+                    name: user.displayName || "",
+                    email: user.email || "",
+                },
+                { withCredentials: true }
+            );
+
+            dispatch(setUserData(response.data));
+            if (!isModel) {
+                navigate(redirectPath, { replace: true });
+            }
         } catch (error) {
+            const authErrorCode = error?.code || "";
+            if (
+                authErrorCode === "auth/popup-blocked" ||
+                authErrorCode === "auth/popup-closed-by-user" ||
+                authErrorCode === "auth/cancelled-popup-request"
+            ) {
+                try {
+                    await signInWithRedirect(auth, provider);
+                    return;
+                } catch (redirectError) {
+                    console.log(redirectError);
+                }
+            }
             console.log(error);
+            dispatch(setUserData(null));
         } finally {
             setIsSubmitting(false);
         }

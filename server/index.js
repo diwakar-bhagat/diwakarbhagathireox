@@ -13,7 +13,9 @@ const app = express()
 
 const normalizeOrigin = (value) => value.replace(/\/+$/, "");
 const defaultOrigins = [
+    "https://ox-client.onrender.com",
     "https://diwakarbhagathireox.onrender.com",
+    "https://diwakarbhagatbuildx-client.onrender.com",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ];
