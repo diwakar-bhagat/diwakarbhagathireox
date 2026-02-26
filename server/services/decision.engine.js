@@ -35,6 +35,7 @@ const normalizeSessionState = (sessionState) => {
       : 5,
     strategy_history: normalizeTextList(safeState.strategy_history),
     question_history: normalizeTextList(safeState.question_history),
+    focus_areas: normalizeTextList(safeState.focus_areas),
   };
 };
 
@@ -159,4 +160,3 @@ export const runDecisionEngine = ({ evaluation, sessionState }) => {
     },
   };
 };
-

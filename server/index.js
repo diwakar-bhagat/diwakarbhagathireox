@@ -76,7 +76,10 @@ app.use((err, req, res, next) => {
     if (err?.name === "MulterError") {
         return res.status(400).json({ message: err.message });
     }
-    if (err?.message === "Only PDF files are allowed.") {
+    if (
+        err?.message === "Only PDF files are allowed."
+        || err?.message === "Only PDF or image files are allowed for JD upload."
+    ) {
         return res.status(400).json({ message: err.message });
     }
 

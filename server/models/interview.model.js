@@ -35,6 +35,41 @@ const interviewSchema = new mongoose.Schema({
     resumeText:{
      type:String
     },
+    resumeAnalysis: {
+      role: { type: String, default: "" },
+      experience: { type: String, default: "" },
+      projects: { type: [String], default: [] },
+      skills: { type: [String], default: [] },
+      keywords: { type: [String], default: [] },
+    },
+    jdAnalysis: {
+      sourceType: { type: String, default: "unknown" },
+      extractedTextPreview: { type: String, default: "" },
+      required_skills: { type: [String], default: [] },
+      preferred_skills: { type: [String], default: [] },
+      keywords: { type: [String], default: [] },
+      seniority: { type: String, default: "unknown" },
+      target_role: { type: String, default: "unknown" },
+      ocrStatus: { type: String, default: "not_requested" },
+    },
+    gapAnalysis: {
+      matchPercentage: { type: Number, default: 0 },
+      missingRequiredSkills: { type: [String], default: [] },
+      missingPreferredSkills: { type: [String], default: [] },
+      strongMatches: { type: [String], default: [] },
+      weakMatches: { type: [String], default: [] },
+      focusAreas: { type: [String], default: [] },
+      atsSignals: {
+        keywordMatchPercent: { type: Number, default: 0 },
+        suggestions: { type: [String], default: [] },
+      },
+    },
+    interviewPlan: {
+      round_structure: { type: [String], default: [] },
+      start_difficulty: { type: Number, default: 2 },
+      interview_focus_areas: { type: [String], default: [] },
+      rationale: { type: [String], default: [] },
+    },
     questions:[questionsSchema],
 
     sessionState: {
@@ -44,6 +79,7 @@ const interviewSchema = new mongoose.Schema({
       confidence_score: { type: Number, default: 5 },
       strategy_history: { type: [String], default: [] },
       question_history: { type: [String], default: [] },
+      focus_areas: { type: [String], default: [] },
     },
 
     finalScore: { type: Number, default: 0 },

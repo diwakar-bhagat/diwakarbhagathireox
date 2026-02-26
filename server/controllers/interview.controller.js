@@ -2,6 +2,8 @@ import fs from "fs"
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { askAi } from "../services/openRouter.service.js";
 import { runDecisionEngine } from "../services/decision.engine.js";
+import { runGapEngine } from "../services/gap.engine.js";
+import { buildInterviewPlan } from "../services/interviewPlanner.service.js";
 import User from "../models/user.model.js";
 import Interview from "../models/interview.model.js";
 
@@ -35,6 +37,201 @@ const parseStrictJson = (aiResponse) => {
     }
     return JSON.parse(match[0]);
   }
+};
+
+const normalizeText = (value) =>
+  typeof value === "string" ? value.trim() : "";
+
+const normalizeTextList = (value) => {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((item) => normalizeText(item).toLowerCase()).filter(Boolean))];
+};
+
+const toTitleCase = (value) =>
+  value
+    .split(" ")
+    .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : ""))
+    .join(" ")
+    .trim();
+
+const toTitleList = (items) => items.map((item) => toTitleCase(item));
+
+const safeUnlinkFile = (path) => {
+  if (!path) return;
+  if (fs.existsSync(path)) {
+    fs.unlinkSync(path);
+  }
+};
+
+const extractPdfTextFromPath = async (filepath) => {
+  const fileBuffer = await fs.promises.readFile(filepath);
+  const uint8Array = new Uint8Array(fileBuffer);
+  const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
+
+  let extracted = "";
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+    const page = await pdf.getPage(pageNum);
+    const content = await page.getTextContent();
+    extracted += `${content.items.map((item) => item.str).join(" ")}\n`;
+  }
+
+  return extracted.replace(/\s+/g, " ").trim();
+};
+
+const extractKeywordsFromText = (text, limit = 12) => {
+  const safeText = normalizeText(text).toLowerCase();
+  if (!safeText) return [];
+
+  const stopWords = new Set([
+    "with", "from", "that", "this", "have", "your", "their", "about",
+    "using", "into", "over", "under", "between", "where", "which", "while",
+    "would", "could", "should", "role", "experience", "skills", "project",
+    "projects", "team", "work", "worked", "build", "built", "years", "year",
+  ]);
+
+  const tokens = safeText
+    .split(/[^a-z0-9+#.]+/i)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && !stopWords.has(token));
+
+  return [...new Set(tokens)].slice(0, limit);
+};
+
+const normalizeResumeAnalysis = ({
+  role,
+  experience,
+  resumeText,
+  projects,
+  skills,
+  resumeAnalysis,
+}) => {
+  const safeAnalysis = resumeAnalysis && typeof resumeAnalysis === "object" ? resumeAnalysis : {};
+
+  const normalizedSkills = normalizeTextList(
+    safeAnalysis.skills ?? skills
+  );
+  const normalizedProjects = normalizeTextList(
+    safeAnalysis.projects ?? projects
+  );
+  const normalizedKeywords = normalizeTextList([
+    ...(Array.isArray(safeAnalysis.keywords) ? safeAnalysis.keywords : []),
+    ...extractKeywordsFromText(resumeText),
+    ...normalizedSkills,
+  ]);
+
+  return {
+    role: normalizeText(safeAnalysis.role || role) || "unknown",
+    experience: normalizeText(safeAnalysis.experience || experience) || "unknown",
+    projects: toTitleList(normalizedProjects),
+    skills: toTitleList(normalizedSkills),
+    keywords: normalizedKeywords.slice(0, 20),
+  };
+};
+
+const buildResumeFallbackAnalysis = ({ role, experience, resumeText, projects, skills }) => {
+  const safeText = normalizeText(resumeText);
+  const lowered = safeText.toLowerCase();
+
+  const rolePatterns = [
+    "software engineer",
+    "frontend developer",
+    "backend developer",
+    "full stack developer",
+    "data scientist",
+    "machine learning engineer",
+    "devops engineer",
+    "qa engineer",
+    "product manager",
+  ];
+
+  const inferredRole = rolePatterns.find((item) => lowered.includes(item)) || normalizeText(role);
+  const expMatch = lowered.match(/(\d+)\s*\+?\s*(years?|yrs?)/i);
+  const inferredExperience = expMatch ? `${expMatch[1]} years` : normalizeText(experience);
+
+  const skillBank = [
+    "javascript", "typescript", "react", "node", "express", "mongodb", "sql", "python",
+    "java", "c++", "firebase", "aws", "docker", "kubernetes", "tailwind", "redux",
+    "rest api", "system design", "machine learning", "nlp",
+  ];
+
+  const inferredSkills = skillBank.filter((item) => lowered.includes(item)).slice(0, 10);
+
+  return normalizeResumeAnalysis({
+    role: inferredRole || "unknown",
+    experience: inferredExperience || "unknown",
+    resumeText: safeText,
+    projects,
+    skills: Array.isArray(skills) && skills.length ? skills : inferredSkills,
+    resumeAnalysis: {
+      role: inferredRole || "unknown",
+      experience: inferredExperience || "unknown",
+      projects: Array.isArray(projects) ? projects : [],
+      skills: Array.isArray(skills) && skills.length ? skills : inferredSkills,
+    },
+  });
+};
+
+const normalizeJdAnalysis = ({ parsed, sourceType, extractedTextPreview, ocrStatus = "enabled" }) => {
+  const safeParsed = parsed && typeof parsed === "object" ? parsed : {};
+
+  return {
+    sourceType: normalizeText(sourceType) || "unknown",
+    extractedTextPreview: normalizeText(extractedTextPreview).slice(0, 300),
+    required_skills: toTitleList(normalizeTextList(safeParsed.required_skills)),
+    preferred_skills: toTitleList(normalizeTextList(safeParsed.preferred_skills)),
+    keywords: normalizeTextList(safeParsed.keywords).slice(0, 25),
+    seniority: normalizeText(safeParsed.seniority).toLowerCase() || "unknown",
+    target_role: normalizeText(safeParsed.target_role) || "unknown",
+    ocrStatus,
+  };
+};
+
+const hasJdSignal = (jdAnalysis) => {
+  if (!jdAnalysis || typeof jdAnalysis !== "object") return false;
+  const requiredCount = Array.isArray(jdAnalysis.required_skills) ? jdAnalysis.required_skills.length : 0;
+  const preferredCount = Array.isArray(jdAnalysis.preferred_skills) ? jdAnalysis.preferred_skills.length : 0;
+  const keywordCount = Array.isArray(jdAnalysis.keywords) ? jdAnalysis.keywords.length : 0;
+  return requiredCount + preferredCount + keywordCount > 0;
+};
+
+const normalizeGapAnalysis = (gapAnalysis) => {
+  const safeGap = gapAnalysis && typeof gapAnalysis === "object" ? gapAnalysis : {};
+  return {
+    matchPercentage: Number.isFinite(Number(safeGap.matchPercentage))
+      ? Number(safeGap.matchPercentage)
+      : 0,
+    missingRequiredSkills: Array.isArray(safeGap.missingRequiredSkills) ? safeGap.missingRequiredSkills : [],
+    missingPreferredSkills: Array.isArray(safeGap.missingPreferredSkills) ? safeGap.missingPreferredSkills : [],
+    strongMatches: Array.isArray(safeGap.strongMatches) ? safeGap.strongMatches : [],
+    weakMatches: Array.isArray(safeGap.weakMatches) ? safeGap.weakMatches : [],
+    focusAreas: Array.isArray(safeGap.focusAreas) ? safeGap.focusAreas : [],
+    atsSignals: {
+      keywordMatchPercent: Number.isFinite(Number(safeGap?.atsSignals?.keywordMatchPercent))
+        ? Number(safeGap.atsSignals.keywordMatchPercent)
+        : 0,
+      suggestions: Array.isArray(safeGap?.atsSignals?.suggestions)
+        ? safeGap.atsSignals.suggestions
+        : [],
+    },
+  };
+};
+
+const normalizeInterviewPlan = (plan) => {
+  const safePlan = plan && typeof plan === "object" ? plan : {};
+  const normalizedFocus = Array.isArray(safePlan.interview_focus_areas)
+    ? safePlan.interview_focus_areas.filter((item) => typeof item === "string" && item.trim())
+    : [];
+
+  return {
+    round_structure: Array.isArray(safePlan.round_structure)
+      ? safePlan.round_structure
+      : [],
+    start_difficulty: Number.isFinite(Number(safePlan.start_difficulty))
+      ? Math.max(1, Math.min(5, Math.round(Number(safePlan.start_difficulty))))
+      : 2,
+    interview_focus_areas: normalizedFocus.slice(0, 5),
+    rationale: Array.isArray(safePlan.rationale) ? safePlan.rationale : [],
+  };
 };
 
 const normalizeEvaluation = (parsed) => {
@@ -82,6 +279,7 @@ const normalizeSessionState = (sessionState, questions) => {
       : questions
           .map((item) => (typeof item?.question === "string" ? item.question.trim() : ""))
           .filter(Boolean),
+    focus_areas: Array.isArray(safeState.focus_areas) ? safeState.focus_areas : [],
   };
 };
 
@@ -97,9 +295,10 @@ const getDifficultyMeta = (difficulty) => {
 
 const dedupeList = (items) => [...new Set(items.filter(Boolean))];
 
-const deriveResumeFocusAreas = (resumeText, weaknessTags) => {
+const deriveResumeFocusAreas = (resumeText, weaknessTags, sessionFocusAreas = []) => {
   const safeResume = typeof resumeText === "string" ? resumeText.toLowerCase() : "";
   const fromWeakness = weaknessTags.slice(0, 3);
+  const fromPlan = Array.isArray(sessionFocusAreas) ? sessionFocusAreas.slice(0, 3) : [];
   const fromResume = [];
 
   if (safeResume.includes("deployment")) fromResume.push("deployment");
@@ -107,7 +306,7 @@ const deriveResumeFocusAreas = (resumeText, weaknessTags) => {
   if (safeResume.includes("scal")) fromResume.push("scalability");
   if (safeResume.includes("architecture")) fromResume.push("architecture");
 
-  return dedupeList([...fromWeakness, ...fromResume]).slice(0, 3);
+  return dedupeList([...fromWeakness, ...fromPlan, ...fromResume]).slice(0, 3);
 };
 
 const buildFallbackQuestion = (strategy, role, focusAreas) => {
@@ -137,7 +336,11 @@ const generateAdaptiveQuestion = async ({
   strengths,
   questionHistory,
 }) => {
-  const focusAreas = deriveResumeFocusAreas(interview?.resumeText, weaknessTags);
+  const focusAreas = deriveResumeFocusAreas(
+    interview?.resumeText,
+    weaknessTags,
+    interview?.sessionState?.focus_areas
+  );
   const fallbackQuestion = buildFallbackQuestion(strategy, interview?.role, focusAreas);
 
   const messages = [
@@ -192,36 +395,16 @@ export const analyzeResume = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "Resume required" });
     }
-    const filepath = req.file.path
 
-    const fileBuffer = await fs.promises.readFile(filepath)
-    const uint8Array = new Uint8Array(fileBuffer)
-
-    const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
-
-    let resumeText = "";
-
-    // Extract text from all pages
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const content = await page.getTextContent();
-
-      const pageText = content.items.map(item => item.str).join(" ");
-      resumeText += pageText + "\n";
-    }
-
-
-    resumeText = resumeText
-      .replace(/\s+/g, " ")
-      .trim();
+    const filepath = req.file.path;
+    const resumeText = await extractPdfTextFromPath(filepath);
 
     const messages = [
       {
         role: "system",
         content: `
 Extract structured data from resume.
-
-Return strictly JSON:
+Return valid JSON only. No markdown.
 
 {
   "role": "string",
@@ -229,45 +412,184 @@ Return strictly JSON:
   "projects": ["project1", "project2"],
   "skills": ["skill1", "skill2"]
 }
-`
+`,
       },
       {
         role: "user",
-        content: resumeText
-      }
+        content: resumeText,
+      },
     ];
 
+    let resumeAnalysis;
+    let usedFallback = false;
 
-    const aiResponse = await askAi(messages)
-
-    const parsed = JSON.parse(aiResponse);
-
-    fs.unlinkSync(filepath)
-
-
-    res.json({
-      role: parsed.role,
-      experience: parsed.experience,
-      projects: parsed.projects,
-      skills: parsed.skills,
-      resumeText
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    try {
+      const aiResponse = await askAi(messages);
+      const parsed = parseStrictJson(aiResponse);
+      resumeAnalysis = normalizeResumeAnalysis({
+        role: parsed?.role,
+        experience: parsed?.experience,
+        resumeText,
+        projects: parsed?.projects,
+        skills: parsed?.skills,
+        resumeAnalysis: parsed,
+      });
+    } catch (aiError) {
+      usedFallback = true;
+      console.warn("Resume AI parse failed, using fallback analysis:", aiError?.message || aiError);
+      resumeAnalysis = buildResumeFallbackAnalysis({
+        role: "",
+        experience: "",
+        resumeText,
+        projects: [],
+        skills: [],
+      });
     }
 
+    safeUnlinkFile(filepath);
+
+    return res.json({
+      role: resumeAnalysis.role,
+      experience: resumeAnalysis.experience,
+      projects: resumeAnalysis.projects,
+      skills: resumeAnalysis.skills,
+      resumeText,
+      resumeAnalysis,
+      aiFallback: usedFallback,
+    });
+  } catch (error) {
+    console.error(error);
+    safeUnlinkFile(req.file?.path);
     return res.status(500).json({ message: "Failed to analyze resume" });
+  }
+};
+
+export const analyzeJd = async (req, res) => {
+  try {
+    const jdTextFromBody = normalizeText(req.body?.jdText);
+    const uploadedFile = req.file;
+
+    if (!uploadedFile && !jdTextFromBody) {
+      return res.status(400).json({ message: "Provide jdText or upload jdFile." });
+    }
+
+    let sourceType = "text";
+    let extractedText = jdTextFromBody;
+
+    if (uploadedFile) {
+      const fileName = normalizeText(uploadedFile.originalname).toLowerCase();
+      const isPdfUpload =
+        uploadedFile.mimetype === "application/pdf" || fileName.endsWith(".pdf");
+
+      if (isPdfUpload) {
+        sourceType = "pdf";
+        extractedText = await extractPdfTextFromPath(uploadedFile.path);
+      } else {
+        sourceType = "image";
+        safeUnlinkFile(uploadedFile.path);
+        return res.status(200).json({
+          jd: {
+            sourceType,
+            extractedTextPreview: "",
+            required_skills: [],
+            preferred_skills: [],
+            keywords: [],
+            seniority: "unknown",
+            target_role: "unknown",
+            ocrStatus: "not_enabled",
+          },
+          message: "OCR is not enabled in this build. Upload JD as PDF or paste JD text.",
+        });
+      }
+    }
+
+    if (!extractedText) {
+      safeUnlinkFile(uploadedFile?.path);
+      return res.status(400).json({ message: "Could not extract JD text. Upload a readable PDF or paste JD text." });
+    }
+
+    const jdMessages = [
+      {
+        role: "system",
+        content: `
+You extract structured requirements from job descriptions.
+Return valid JSON only. No markdown.
+
+{
+  "required_skills": ["string"],
+  "preferred_skills": ["string"],
+  "keywords": ["string"],
+  "seniority": "intern|junior|mid|senior|unknown",
+  "target_role": "string|unknown"
+}
+`,
+      },
+      {
+        role: "user",
+        content: extractedText.slice(0, 12000),
+      },
+    ];
+
+    const jdAiResponse = await askAi(jdMessages);
+    const jdParsed = parseStrictJson(jdAiResponse);
+    const jd = normalizeJdAnalysis({
+      parsed: jdParsed,
+      sourceType,
+      extractedTextPreview: extractedText,
+      ocrStatus: sourceType === "image" ? "not_enabled" : "enabled",
+    });
+
+    const resumeAnalysis = normalizeResumeAnalysis({
+      role: req.body?.role,
+      experience: req.body?.experience,
+      resumeText: req.body?.resumeText,
+      projects: req.body?.projects,
+      skills: req.body?.skills,
+      resumeAnalysis: req.body?.resumeAnalysis,
+    });
+
+    let gapAnalysis = null;
+    let interviewPlan = null;
+
+    if (resumeAnalysis.skills.length || resumeAnalysis.projects.length || resumeAnalysis.keywords.length) {
+      gapAnalysis = runGapEngine({ resumeAnalysis, jdAnalysis: jd });
+      interviewPlan = buildInterviewPlan({
+        role: req.body?.role || jd.target_role,
+        experience: req.body?.experience,
+        resumeAnalysis,
+        jdGapResult: gapAnalysis,
+      });
+    }
+
+    safeUnlinkFile(uploadedFile?.path);
+
+    return res.status(200).json({
+      jd,
+      ...(gapAnalysis ? { gapAnalysis } : {}),
+      ...(interviewPlan ? { interviewPlan } : {}),
+    });
+  } catch (error) {
+    console.error("failed to analyze jd", error);
+    safeUnlinkFile(req.file?.path);
+    return res.status(500).json({ message: "Failed to analyze JD" });
   }
 };
 
 
 export const generateQuestion = async (req, res) => {
   try {
-    let { role, experience, mode, resumeText, projects, skills } = req.body
+    let {
+      role,
+      experience,
+      mode,
+      resumeText,
+      projects,
+      skills,
+      resumeAnalysis,
+      jdAnalysis,
+      gapAnalysis,
+      interviewPlan,
+    } = req.body
 
     if (!req.userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -303,7 +625,43 @@ export const generateQuestion = async (req, res) => {
       ? skills.join(", ")
       : "None";
 
-    const safeResume = resumeText?.trim() || "None";
+    const safeResume = normalizeText(resumeText) || "None";
+    const normalizedResumeAnalysis = normalizeResumeAnalysis({
+      role,
+      experience,
+      resumeText: safeResume,
+      projects,
+      skills,
+      resumeAnalysis,
+    });
+
+    const normalizedJdAnalysis = hasJdSignal(jdAnalysis)
+      ? normalizeJdAnalysis({
+          parsed: jdAnalysis,
+          sourceType: jdAnalysis?.sourceType || "text",
+          extractedTextPreview: jdAnalysis?.extractedTextPreview || "",
+          ocrStatus: jdAnalysis?.ocrStatus || "enabled",
+        })
+      : null;
+
+    const computedGapAnalysis = normalizedJdAnalysis
+      ? runGapEngine({ resumeAnalysis: normalizedResumeAnalysis, jdAnalysis: normalizedJdAnalysis })
+      : null;
+    const normalizedGapAnalysis = computedGapAnalysis || normalizeGapAnalysis(gapAnalysis);
+
+    const computedInterviewPlan = buildInterviewPlan({
+      role,
+      experience,
+      resumeAnalysis: normalizedResumeAnalysis,
+      jdGapResult: normalizedGapAnalysis,
+    });
+    const normalizedInterviewPlan = normalizeInterviewPlan(interviewPlan);
+    const effectiveInterviewPlan = normalizedInterviewPlan.interview_focus_areas.length
+      ? normalizedInterviewPlan
+      : computedInterviewPlan;
+    const focusAreas = effectiveInterviewPlan.interview_focus_areas.slice(0, 5);
+    const missingSkills = normalizedGapAnalysis.missingRequiredSkills.slice(0, 5);
+    const targetRole = normalizedJdAnalysis?.target_role || "unknown";
 
     const userPrompt = `
     Role:${role}
@@ -312,6 +670,10 @@ export const generateQuestion = async (req, res) => {
     Projects:${projectText}
     Skills:${skillsText},
     Resume:${safeResume}
+    TargetRoleFromJD:${targetRole}
+    FocusAreas:${focusAreas.join(", ") || "None"}
+    MissingRequiredSkills:${missingSkills.join(", ") || "None"}
+    MatchPercentage:${normalizedGapAnalysis.matchPercentage || 0}
     `;
 
     if (!userPrompt.trim()) {
@@ -348,7 +710,7 @@ Question 3 → medium
 Question 4 → medium  
 Question 5 → hard  
 
-Make questions based on the candidate’s role, experience,interviewMode, projects, skills, and resume details.
+Make questions based on the candidate’s role, experience,interviewMode, projects, skills, resume details, focus areas, and missing required skills.
 `
       }
       ,
@@ -391,6 +753,14 @@ Make questions based on the candidate’s role, experience,interviewMode, projec
       experience,
       mode,
       resumeText: safeResume,
+      resumeAnalysis: normalizedResumeAnalysis,
+      ...(normalizedJdAnalysis ? { jdAnalysis: normalizedJdAnalysis } : {}),
+      gapAnalysis: normalizedGapAnalysis,
+      interviewPlan: effectiveInterviewPlan,
+      sessionState: {
+        current_difficulty: effectiveInterviewPlan.start_difficulty || 2,
+        focus_areas: focusAreas,
+      },
       questions: questionsArray.map((q, index) => ({
         question: q,
         difficulty: ["easy", "easy", "medium", "medium", "hard"][index],
@@ -402,7 +772,10 @@ Make questions based on the candidate’s role, experience,interviewMode, projec
       interviewId: interview._id,
       creditsLeft: user.credits,
       userName: user.name,
-      questions: interview.questions
+      questions: interview.questions,
+      gapAnalysis: interview.gapAnalysis,
+      interviewPlan: interview.interviewPlan,
+      jdAnalysis: interview.jdAnalysis
     });
   } catch (error) {
     console.error("failed to create interview", error);
