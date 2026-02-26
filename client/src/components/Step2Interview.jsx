@@ -13,6 +13,7 @@ import { BsArrowRight } from 'react-icons/bs'
 import { useDispatch, useSelector } from 'react-redux'
 import { setAiThinking } from '../redux/uiSlice'
 import AIThinkingIndicator from './loaders/AIThinkingIndicator'
+import { IoSparkles } from "react-icons/io5";
 
 function Step2Interview({ interviewData, onFinish }) {
   const dispatch = useDispatch()
@@ -25,6 +26,9 @@ function Step2Interview({ interviewData, onFinish }) {
   const [isAIPlaying, setIsAIPlaying] = useState(false);
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [dynamicQuestions, setDynamicQuestions] = useState(questions);
+  const [agentMeta, setAgentMeta] = useState(null);
+  const SHOW_AGENT_CHIPS = true;
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState("");
   const [timeLeft, setTimeLeft] = useState(
@@ -38,14 +42,14 @@ function Step2Interview({ interviewData, onFinish }) {
 
   const videoRef = useRef(null);
 
-  const currentQuestion = questions[currentIndex];
+  const currentQuestion = dynamicQuestions[currentIndex];
   const currentQuestionRef = useRef(currentQuestion);
   const isMicOnRef = useRef(isMicOn);
   const isIntroPhaseRef = useRef(isIntroPhase);
   const isSubmittingRef = useRef(isSubmitting);
   const feedbackRef = useRef(feedback);
   const userNameRef = useRef(userName);
-  const questionsLengthRef = useRef(questions.length);
+  const questionsLengthRef = useRef(dynamicQuestions.length);
   const speakTextRef = useRef(null);
   const startMicRef = useRef(null);
   const submitAnswerRef = useRef(null);
@@ -288,6 +292,22 @@ function Step2Interview({ interviewData, onFinish }) {
           currentQuestion.timeLimit - timeLeft,
       }, { withCredentials: true })
 
+      if (result.data.nextQuestion && currentIndex + 1 < dynamicQuestions.length) {
+        setDynamicQuestions(prev => {
+          const updated = [...prev];
+          updated[currentIndex + 1] = { ...updated[currentIndex + 1], question: result.data.nextQuestion };
+          return updated;
+        });
+      }
+
+      if (result.data.nextStrategy || result.data.sessionState) {
+        setAgentMeta({
+          strategy: result.data.nextStrategy,
+          difficulty: result.data.sessionState?.current_difficulty,
+          weakness: result.data.sessionState?.weakness_tags?.slice(0, 2) || []
+        });
+      }
+
       setFeedback(result.data.feedback)
       speakText(result.data.feedback)
     } catch (error) {
@@ -303,7 +323,7 @@ function Step2Interview({ interviewData, onFinish }) {
     setAnswer("");
     setFeedback("");
 
-    if (currentIndex + 1 >= questions.length) {
+    if (currentIndex + 1 >= dynamicQuestions.length) {
       finishInterview();
       return;
     }
@@ -413,7 +433,7 @@ function Step2Interview({ interviewData, onFinish }) {
               </div>
 
               <div>
-                <span className='text-2xl font-bold text-emerald-600 dark:text-emerald-400'>{questions.length}</span>
+                <span className='text-2xl font-bold text-emerald-600 dark:text-emerald-400'>{dynamicQuestions.length}</span>
                 <p className='text-xs text-gray-400 dark:text-gray-500'>Total Questions</p>
               </div>
             </div>
@@ -430,12 +450,46 @@ function Step2Interview({ interviewData, onFinish }) {
           </h2>
 
 
-          {!isIntroPhase && (<div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm'>
+          {!isIntroPhase && (<div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>
             <p className='text-xs sm:text-sm text-gray-400 dark:text-gray-500 mb-2'>
-              Question {currentIndex + 1} of {questions.length}
+              Question {currentIndex + 1} of {dynamicQuestions.length}
             </p>
 
-            <div className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 leading-relaxed '>{currentQuestion?.question}</div>
+            <Motion.div
+              key={currentIndex}
+              initial={{ opacity: 0, x: 5 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 leading-relaxed'
+            >
+              {currentQuestion?.question}
+            </Motion.div>
+
+            {SHOW_AGENT_CHIPS && agentMeta && (
+              <Motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className='flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200/50 dark:border-slate-700/50'
+              >
+                {agentMeta.strategy && (
+                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-emerald-100/60 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full border border-emerald-200/60 dark:border-emerald-800/50 flex items-center gap-1 capitalize'>
+                    <IoSparkles size={10} className="hidden sm:inline" />
+                    {agentMeta.strategy.replace(/_/g, " ")}
+                  </span>
+                )}
+                {agentMeta.difficulty && (
+                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-emerald-100/60 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full border border-emerald-200/60 dark:border-emerald-800/50'>
+                    Diff: L{agentMeta.difficulty}
+                  </span>
+                )}
+                {agentMeta.weakness?.length > 0 && (
+                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-emerald-100/60 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full border border-emerald-200/60 dark:border-emerald-800/50 capitalize'>
+                    Focus: {agentMeta.weakness.join(", ")}
+                  </span>
+                )}
+              </Motion.div>
+            )}
           </div>)
           }
           <textarea
@@ -447,21 +501,21 @@ function Step2Interview({ interviewData, onFinish }) {
 
           {!feedback ? (<div className='mt-6 space-y-3'>
             <div className='flex items-center gap-4'>
-            <Motion.button
-              onClick={toggleMic}
-              whileTap={{ scale: 0.9 }}
-              className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black dark:bg-emerald-600 text-white shadow-lg'>
-              {isMicOn ? <FaMicrophone size={20} /> : <FaMicrophoneSlash size={20} />}
-            </Motion.button>
+              <Motion.button
+                onClick={toggleMic}
+                whileTap={{ scale: 0.9 }}
+                className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black dark:bg-emerald-600 text-white shadow-lg'>
+                {isMicOn ? <FaMicrophone size={20} /> : <FaMicrophoneSlash size={20} />}
+              </Motion.button>
 
-            <Motion.button
-              onClick={submitAnswer}
-              disabled={isSubmitting}
-              whileTap={{ scale: 0.95 }}
-              className='flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white py-3 sm:py-4 rounded-2xl shadow-lg hover:opacity-90 transition font-semibold disabled:bg-gray-500 dark:disabled:bg-slate-800'>
-              {isSubmitting ? "Submitting..." : "Submit Answer"}
+              <Motion.button
+                onClick={submitAnswer}
+                disabled={isSubmitting}
+                whileTap={{ scale: 0.95 }}
+                className='flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white py-3 sm:py-4 rounded-2xl shadow-lg hover:opacity-90 transition font-semibold disabled:bg-gray-500 dark:disabled:bg-slate-800'>
+                {isSubmitting ? "Submitting..." : "Submit Answer"}
 
-            </Motion.button>
+              </Motion.button>
 
             </div>
 
