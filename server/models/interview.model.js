@@ -37,6 +37,15 @@ const interviewSchema = new mongoose.Schema({
     },
     questions:[questionsSchema],
 
+    sessionState: {
+      current_difficulty: { type: Number, default: 2 },
+      weakness_tags: { type: [String], default: [] },
+      strengths: { type: [String], default: [] },
+      confidence_score: { type: Number, default: 5 },
+      strategy_history: { type: [String], default: [] },
+      question_history: { type: [String], default: [] },
+    },
+
     finalScore: { type: Number, default: 0 },
 
     status: {

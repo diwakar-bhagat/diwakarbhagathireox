@@ -1,11 +1,191 @@
 import fs from "fs"
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { askAi } from "../services/openRouter.service.js";
+import { runDecisionEngine } from "../services/decision.engine.js";
 import User from "../models/user.model.js";
 import Interview from "../models/interview.model.js";
 
 const isOwnedInterview = (interview, userId) =>
   String(interview.userId) === String(userId);
+
+const clampScore = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  if (parsed < 0) return 0;
+  if (parsed > 10) return 10;
+  return parsed;
+};
+
+const normalizeBuzzwordDensity = (value) => {
+  if (value === "low" || value === "medium" || value === "high") return value;
+  return "medium";
+};
+
+const parseStrictJson = (aiResponse) => {
+  if (!aiResponse || typeof aiResponse !== "string") {
+    throw new Error("AI returned empty response");
+  }
+
+  try {
+    return JSON.parse(aiResponse);
+  } catch {
+    const match = aiResponse.match(/\{[\s\S]*\}/);
+    if (!match) {
+      throw new Error("AI response is not valid JSON");
+    }
+    return JSON.parse(match[0]);
+  }
+};
+
+const normalizeEvaluation = (parsed) => {
+  const conceptual = clampScore(parsed?.conceptual_correctness);
+  const implementation = clampScore(parsed?.implementation_depth);
+  const tradeoff = clampScore(parsed?.tradeoff_awareness);
+  const clarity = clampScore(parsed?.clarity);
+  const confidence = clampScore(parsed?.confidence);
+
+  const finalScore = Number(
+    ((conceptual + implementation + tradeoff + clarity + confidence) / 5).toFixed(1)
+  );
+
+  return {
+    conceptual_correctness: conceptual,
+    implementation_depth: implementation,
+    tradeoff_awareness: tradeoff,
+    clarity,
+    confidence,
+    vagueness_flag: Boolean(parsed?.vagueness_flag),
+    buzzword_density: normalizeBuzzwordDensity(parsed?.buzzword_density),
+    feedback:
+      typeof parsed?.feedback === "string" && parsed.feedback.trim()
+        ? parsed.feedback.trim()
+        : "You showed effort. Improve depth and explain practical tradeoffs more clearly.",
+    finalScore,
+  };
+};
+
+const normalizeSessionState = (sessionState, questions) => {
+  const safeState = sessionState && typeof sessionState === "object" ? sessionState : {};
+
+  return {
+    current_difficulty: Number.isFinite(Number(safeState.current_difficulty))
+      ? Math.max(1, Math.min(5, Math.round(Number(safeState.current_difficulty))))
+      : 2,
+    weakness_tags: Array.isArray(safeState.weakness_tags) ? safeState.weakness_tags : [],
+    strengths: Array.isArray(safeState.strengths) ? safeState.strengths : [],
+    confidence_score: Number.isFinite(Number(safeState.confidence_score))
+      ? Math.max(0, Math.min(10, Number(safeState.confidence_score)))
+      : 5,
+    strategy_history: Array.isArray(safeState.strategy_history) ? safeState.strategy_history : [],
+    question_history: Array.isArray(safeState.question_history)
+      ? safeState.question_history
+      : questions
+          .map((item) => (typeof item?.question === "string" ? item.question.trim() : ""))
+          .filter(Boolean),
+  };
+};
+
+const getDifficultyMeta = (difficulty) => {
+  if (difficulty >= 4) {
+    return { label: "hard", timeLimit: 120 };
+  }
+  if (difficulty >= 3) {
+    return { label: "medium", timeLimit: 90 };
+  }
+  return { label: "easy", timeLimit: 60 };
+};
+
+const dedupeList = (items) => [...new Set(items.filter(Boolean))];
+
+const deriveResumeFocusAreas = (resumeText, weaknessTags) => {
+  const safeResume = typeof resumeText === "string" ? resumeText.toLowerCase() : "";
+  const fromWeakness = weaknessTags.slice(0, 3);
+  const fromResume = [];
+
+  if (safeResume.includes("deployment")) fromResume.push("deployment");
+  if (safeResume.includes("monitor")) fromResume.push("monitoring");
+  if (safeResume.includes("scal")) fromResume.push("scalability");
+  if (safeResume.includes("architecture")) fromResume.push("architecture");
+
+  return dedupeList([...fromWeakness, ...fromResume]).slice(0, 3);
+};
+
+const buildFallbackQuestion = (strategy, role, focusAreas) => {
+  const safeRole = role || "this role";
+  const focusText = focusAreas.length ? focusAreas.join(", ") : "your recent project";
+
+  if (strategy === "clarify") {
+    return `Can you clarify your core approach for ${safeRole} and explain the exact problem you solved in ${focusText}?`;
+  }
+  if (strategy === "probe_deeper") {
+    return `Please go deeper into your implementation details for ${focusText}, including tradeoffs, failure cases, and production constraints.`;
+  }
+  if (strategy === "ask_example") {
+    return `Give one concrete production example from ${focusText} with measurable impact and the key decisions you made.`;
+  }
+  if (strategy === "increase_difficulty") {
+    return `Design a harder ${safeRole} scenario for ${focusText} and explain how you would scale, monitor, and debug it end to end.`;
+  }
+  return `Switching topic slightly, explain how your ${safeRole} experience prepared you to handle ambiguity in ${focusText}.`;
+};
+
+const generateAdaptiveQuestion = async ({
+  interview,
+  strategy,
+  difficultyLabel,
+  weaknessTags,
+  strengths,
+  questionHistory,
+}) => {
+  const focusAreas = deriveResumeFocusAreas(interview?.resumeText, weaknessTags);
+  const fallbackQuestion = buildFallbackQuestion(strategy, interview?.role, focusAreas);
+
+  const messages = [
+    {
+      role: "system",
+      content: `
+You are an adaptive interviewer.
+Generate exactly one interview question as one sentence.
+Rules:
+- 15 to 28 words
+- no numbering
+- no preface or explanation
+- must follow strategy and focus areas
+- difficulty should be ${difficultyLabel}
+- return plain text only
+`,
+    },
+    {
+      role: "user",
+      content: `
+Role: ${interview?.role || "Unknown"}
+Experience: ${interview?.experience || "Unknown"}
+Mode: ${interview?.mode || "Technical"}
+Strategy: ${strategy}
+Weakness tags: ${weaknessTags.join(", ") || "none"}
+Strength tags: ${strengths.join(", ") || "none"}
+Focus areas: ${focusAreas.join(", ") || "none"}
+Recent questions: ${questionHistory.slice(-3).join(" | ") || "none"}
+Resume context: ${(interview?.resumeText || "").slice(0, 700)}
+`,
+    },
+  ];
+
+  try {
+    const aiResponse = await askAi(messages);
+    const firstLine = String(aiResponse || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)[0];
+
+    if (!firstLine) {
+      return { question: fallbackQuestion, focusAreas };
+    }
+    return { question: firstLine, focusAreas };
+  } catch {
+    return { question: fallbackQuestion, focusAreas };
+  }
+};
 
 export const analyzeResume = async (req, res) => {
   try {
@@ -260,12 +440,18 @@ export const submitAnswer = async (req, res) => {
 
     const question = interview.questions[questionIndex]
     const safeAnswer = typeof answer === "string" ? answer.trim() : "";
+    const sessionState = normalizeSessionState(interview.sessionState, interview.questions);
 
     // If no answer
     if (!safeAnswer) {
       question.score = 0;
       question.feedback = "You did not submit an answer.";
       question.answer = "";
+      sessionState.question_history = dedupeList([
+        ...sessionState.question_history,
+        question.question,
+      ]);
+      interview.sessionState = sessionState;
 
       await interview.save();
 
@@ -280,6 +466,12 @@ export const submitAnswer = async (req, res) => {
       question.feedback = "Time limit exceeded. Answer not evaluated.";
       question.answer = safeAnswer;
 
+      sessionState.question_history = dedupeList([
+        ...sessionState.question_history,
+        question.question,
+      ]);
+      interview.sessionState = sessionState;
+
       await interview.save();
 
       return res.json({
@@ -292,43 +484,20 @@ export const submitAnswer = async (req, res) => {
       {
         role: "system",
         content: `
-You are a professional human interviewer evaluating a candidate's answer in a real interview.
+You are a strict interview evaluator.
+Evaluate the candidate response and return ONLY valid JSON.
+Do not include markdown, explanation, or extra text.
 
-Evaluate naturally and fairly, like a real person would.
-
-Score the answer in these areas (0 to 10):
-
-1. Confidence – Does the answer sound clear, confident, and well-presented?
-2. Communication – Is the language simple, clear, and easy to understand?
-3. Correctness – Is the answer accurate, relevant, and complete?
-
-Rules:
-- Be realistic and unbiased.
-- Do not give random high scores.
-- If the answer is weak, score low.
-- If the answer is strong and detailed, score high.
-- Consider clarity, structure, and relevance.
-
-Calculate:
-finalScore = average of confidence, communication, and correctness (rounded to nearest whole number).
-
-Feedback Rules:
-- Write natural human feedback.
-- 10 to 15 words only.
-- Sound like real interview feedback.
-- Can suggest improvement if needed.
-- Do NOT repeat the question.
-- Do NOT explain scoring.
-- Keep tone professional and honest.
-
-Return ONLY valid JSON in this format:
-
+Return this exact schema:
 {
-  "confidence": number,
-  "communication": number,
-  "correctness": number,
-  "finalScore": number,
-  "feedback": "short human feedback"
+  "conceptual_correctness": 1-10,
+  "implementation_depth": 1-10,
+  "tradeoff_awareness": 1-10,
+  "clarity": 1-10,
+  "confidence": 1-10,
+  "vagueness_flag": boolean,
+  "buzzword_density": "low" | "medium" | "high",
+  "feedback": "10 to 18 words, professional and actionable"
 }
 `
       }
@@ -342,22 +511,97 @@ Answer: ${safeAnswer}
       }
     ];
 
-
     const aiResponse = await askAi(messages)
-
-
-    const parsed = JSON.parse(aiResponse);
+    const parsed = parseStrictJson(aiResponse);
+    const evaluation = normalizeEvaluation(parsed);
 
     question.answer = safeAnswer;
-    question.confidence = parsed.confidence;
-    question.communication = parsed.communication;
-    question.correctness = parsed.correctness;
-    question.score = parsed.finalScore;
-    question.feedback = parsed.feedback;
+    question.confidence = evaluation.confidence;
+    question.communication = evaluation.clarity;
+    question.correctness = evaluation.conceptual_correctness;
+    question.score = evaluation.finalScore;
+    question.feedback = evaluation.feedback;
+
+    const questionHistory = dedupeList([
+      ...sessionState.question_history,
+      question.question,
+    ]);
+
+    const decision = runDecisionEngine({
+      evaluation: {
+        conceptual_correctness: evaluation.conceptual_correctness,
+        implementation_depth: evaluation.implementation_depth,
+        tradeoff_awareness: evaluation.tradeoff_awareness,
+        clarity: evaluation.clarity,
+        confidence: evaluation.confidence,
+        vagueness_flag: evaluation.vagueness_flag,
+        buzzword_density: evaluation.buzzword_density,
+      },
+      sessionState: {
+        ...sessionState,
+        question_history: questionHistory,
+      },
+    });
+
+    const updatedSessionState = {
+      ...decision.updated_session_state,
+      question_history: questionHistory,
+    };
+
+    const difficultyMeta = getDifficultyMeta(updatedSessionState.current_difficulty);
+    const nextQuestionIndex = questionIndex + 1;
+    let nextQuestionText = null;
+
+    if (nextQuestionIndex < interview.questions.length) {
+      const adaptiveQuestion = await generateAdaptiveQuestion({
+        interview,
+        strategy: decision.next_strategy,
+        difficultyLabel: difficultyMeta.label,
+        weaknessTags: updatedSessionState.weakness_tags,
+        strengths: updatedSessionState.strengths,
+        questionHistory,
+      });
+
+      const nextQuestionPayload = {
+        question: adaptiveQuestion.question,
+        difficulty: difficultyMeta.label,
+        timeLimit: difficultyMeta.timeLimit,
+        answer: "",
+        feedback: "",
+        score: 0,
+        confidence: 0,
+        communication: 0,
+        correctness: 0,
+      };
+
+      const existingNextQuestion = interview.questions[nextQuestionIndex];
+      if (!existingNextQuestion.answer) {
+        existingNextQuestion.question = nextQuestionPayload.question;
+        existingNextQuestion.difficulty = nextQuestionPayload.difficulty;
+        existingNextQuestion.timeLimit = nextQuestionPayload.timeLimit;
+        nextQuestionText = existingNextQuestion.question;
+      }
+    }
+
+    interview.sessionState = updatedSessionState;
+
     await interview.save();
 
-
-    return res.status(200).json({ feedback: parsed.feedback })
+    return res.status(200).json({
+      feedback: evaluation.feedback,
+      nextQuestion: nextQuestionText,
+      nextStrategy: decision.next_strategy,
+      sessionState: updatedSessionState,
+      evaluation: {
+        conceptual_correctness: evaluation.conceptual_correctness,
+        implementation_depth: evaluation.implementation_depth,
+        tradeoff_awareness: evaluation.tradeoff_awareness,
+        clarity: evaluation.clarity,
+        confidence: evaluation.confidence,
+        vagueness_flag: evaluation.vagueness_flag,
+        buzzword_density: evaluation.buzzword_density,
+      },
+    })
   } catch (error) {
     console.error("failed to submit answer", error);
     return res.status(500).json({ message: "failed to submit answer" })
