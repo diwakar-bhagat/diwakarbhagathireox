@@ -7,11 +7,13 @@ import { ServerUrl } from '../App';
 import { useDispatch } from 'react-redux';
 import { setUserData } from '../redux/userSlice';
 import { clearPaymentProcessing, setPaymentProcessing } from '../redux/uiSlice';
+import useRazorpay from "react-razorpay";
 function Pricing() {
   const navigate = useNavigate()
   const [selectedPlan, setSelectedPlan] = useState("free");
   const [loadingPlan, setLoadingPlan] = useState(null);
   const dispatch = useDispatch()
+  const [Razorpay] = useRazorpay();
 
   useEffect(() => {
     return () => {
@@ -24,10 +26,10 @@ function Pricing() {
       id: "free",
       name: "Free",
       price: "₹0",
-      credits: 150,
+      credits: 100,
       description: "Perfect for beginners starting interview preparation.",
       features: [
-        "150 AI Interview Credits",
+        "100 AI Interview Credits",
         "Basic Performance Report",
         "Voice Interview Access",
         "Limited History Tracking",
@@ -116,12 +118,12 @@ function Pricing() {
 
       }
 
-      const rzp = new window.Razorpay(options)
+      const rzp = new Razorpay(options);
       rzp.on("payment.failed", () => {
         dispatch(setPaymentProcessing({ status: "error", message: "Transaction failed." }))
         setLoadingPlan(null);
       });
-      rzp.open()
+      rzp.open();
     } catch (error) {
       console.log(error)
       dispatch(setPaymentProcessing({ status: "error", message: "Could not start payment." }))
