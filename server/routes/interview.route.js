@@ -9,6 +9,7 @@ import { analyzeJd, analyzeResume, finishInterview, generateQuestion, getIntervi
 const interviewRouter = express.Router()
 
 interviewRouter.post("/resume",isAuth,upload.single("resume"),analyzeResume)
+interviewRouter.post("/analyze-resume",isAuth,upload.single("resume"),analyzeResume)
 interviewRouter.post("/analyze-jd",isAuth,uploadJd.single("jdFile"),analyzeJd)
 interviewRouter.post("/generate-questions",isAuth,generateQuestion)
 interviewRouter.post("/submit-answer",isAuth,submitAnswer)
