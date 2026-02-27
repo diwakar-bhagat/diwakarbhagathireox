@@ -253,12 +253,16 @@ function Step1SetUp({ onStart }) {
                                 {/* Interview Structure Panel */}
                                 <div>
                                     <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Round Structure</h4>
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                         {(interviewPlan?.round_structure || ["Behavioral", "Technical", "Applied", "System Design"]).map((round, idx) => (
                                             <span key={idx} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 shadow-sm border border-gray-300 dark:border-slate-600">
                                                 {idx + 1}. {round.replace(/_/g, " ")}
                                             </span>
                                         ))}
+                                        {/* Starting Difficulty Chip */}
+                                        <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 shadow-sm border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 ml-auto">
+                                            Start Level: {interviewPlan?.start_difficulty || 2}/5
+                                        </span>
                                     </div>
                                 </div>
 
