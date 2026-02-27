@@ -156,6 +156,5 @@ function canLoadLightningCss() {
     listDirSafe(path.join(cwd, "node_modules", "lightningcss-linux-x64-musl"))
   );
 
-  console.warn("[native-deps] lightningcss native binary not found after repair attempts; continuing to vite build.");
-  process.exit(0);
+  throw new Error("[native-deps] lightningcss native binary still missing after repair attempts.");
 })();
