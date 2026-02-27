@@ -23,9 +23,14 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const InterviewReport = lazy(() => import("./pages/InterviewReport"));
 
 const normalizeServerUrl = (value) => value.replace(/\/+$/, "")
-export const ServerUrl = normalizeServerUrl(
-  import.meta.env.VITE_SERVER_URL || "https://ox-server-90t3.onrender.com"
-)
+const isLocalHostRuntime = typeof window !== "undefined"
+  && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+const resolvedServerUrl = isLocalHostRuntime
+  ? (import.meta.env.VITE_LOCAL_SERVER_URL || "http://localhost:8000")
+  : (import.meta.env.VITE_SERVER_URL || "https://ox-server-90t3.onrender.com");
+
+export const ServerUrl = normalizeServerUrl(resolvedServerUrl)
 
 function App() {
   const dispatch = useDispatch();
