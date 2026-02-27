@@ -62,7 +62,7 @@ function Step1SetUp({ onStart }) {
         formdata.append("resume", resumeFile);
 
         try {
-            const result = await axios.post(ServerUrl + "/api/interview/analyze-resume", formdata, { withCredentials: true });
+            const result = await axios.post(ServerUrl + "/api/interview/resume", formdata, { withCredentials: true });
             dispatch(setResumeData(result.data));
             setRole(result.data.role !== "unknown" ? result.data.role : "");
             setExperience(result.data.experience !== "unknown" ? result.data.experience : "");
