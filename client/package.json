@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "prebuild": "node ./scripts/ensure-rollup-linux-native.mjs",
+    "prebuild": "node ./scripts/ensure-native-deps.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -48,6 +48,7 @@
     "minimatch": "3.1.4"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "4.59.0"
+    "@rollup/rollup-linux-x64-gnu": "4.59.0",
+    "lightningcss-linux-x64-gnu": "1.30.2"
   }
 }
