@@ -405,8 +405,8 @@ function Step1SetUp({ onStart }) {
                                                 onChange={(e) => setJdText(e.target.value)}
                                             />
 
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex-1">
+                                            <div className="flex flex-col md:flex-row gap-3">
+                                                <div className="flex-1 w-full md:w-auto">
                                                     <input type="file" id="jdUpload" className="hidden" accept="application/pdf" onChange={(e) => setJdFile(e.target.files[0])} />
                                                     <button onClick={() => document.getElementById("jdUpload").click()} className="w-full flex items-center justify-center gap-2 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition text-sm text-gray-700 dark:text-gray-300 truncate px-2">
                                                         <FaFileAlt /> <span className="truncate">{jdFile ? jdFile.name : "Upload PDF"}</span>
@@ -415,7 +415,7 @@ function Step1SetUp({ onStart }) {
                                                 <button
                                                     disabled={(!jdText && !jdFile) || analyzingJd}
                                                     onClick={handleAnalyzeJd}
-                                                    className="flex-1 bg-gray-900 dark:bg-slate-700 text-white py-2 rounded-lg hover:bg-gray-800 transition text-sm font-medium disabled:opacity-50">
+                                                    className="flex-1 w-full md:w-auto bg-gray-900 dark:bg-slate-700 text-white py-2 rounded-lg hover:bg-gray-800 transition text-sm font-medium disabled:opacity-50">
                                                     {analyzingJd ? "Analyzing..." : "Analyze JD"}
                                                 </button>
                                             </div>
