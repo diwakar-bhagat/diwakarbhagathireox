@@ -7,13 +7,11 @@ import { ServerUrl } from '../App';
 import { useDispatch } from 'react-redux';
 import { setUserData } from '../redux/userSlice';
 import { clearPaymentProcessing, setPaymentProcessing } from '../redux/uiSlice';
-import { useRazorpay } from "react-razorpay";
 function Pricing() {
   const navigate = useNavigate()
   const [selectedPlan, setSelectedPlan] = useState("free");
   const [loadingPlan, setLoadingPlan] = useState(null);
   const dispatch = useDispatch()
-  const { Razorpay, isLoading: isRazorpayLoading, error: razorpayLoadError } = useRazorpay();
 
   useEffect(() => {
     return () => {
@@ -68,11 +66,7 @@ function Pricing() {
 
 
   const handlePayment = async (plan) => {
-    if (isRazorpayLoading) {
-      dispatch(setPaymentProcessing({ status: "error", message: "Payment SDK is still loading. Please wait." }))
-      return;
-    }
-    if (razorpayLoadError || !Razorpay) {
+    if (!window.Razorpay) {
       dispatch(setPaymentProcessing({ status: "error", message: "Unable to load payment gateway. Please refresh and try again." }))
       return;
     }
@@ -124,10 +118,9 @@ function Pricing() {
         theme: {
           color: "#10b981",
         },
-
       }
 
-      const rzp = new Razorpay(options);
+      const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", () => {
         dispatch(setPaymentProcessing({ status: "error", message: "Transaction failed." }))
         setLoadingPlan(null);
