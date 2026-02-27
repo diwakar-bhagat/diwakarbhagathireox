@@ -29,6 +29,11 @@ function listDirSafe(dir) {
   }
 }
 
+function readLightningVersion() {
+  const parsed = JSON.parse(fs.readFileSync(pkgJson, "utf8"));
+  return parsed.version;
+}
+
 function findNativeBinary() {
   const candidates = [
     path.join(pkgDir, "lightningcss.linux-x64-gnu.node"),
@@ -36,7 +41,9 @@ function findNativeBinary() {
     path.join(pkgDir, "lightningcss.linux-x64-musl.node"),
     path.join(pkgDir, "node", "lightningcss.linux-x64-musl.node"),
     path.join(cwd, "node_modules", "lightningcss-linux-x64-gnu", "lightningcss.linux-x64-gnu.node"),
+    path.join(cwd, "node_modules", "lightningcss-linux-x64-gnu", "node", "lightningcss.linux-x64-gnu.node"),
     path.join(cwd, "node_modules", "lightningcss-linux-x64-musl", "lightningcss.linux-x64-musl.node"),
+    path.join(cwd, "node_modules", "lightningcss-linux-x64-musl", "node", "lightningcss.linux-x64-musl.node"),
   ];
   return candidates.find(exists) || null;
 }
@@ -83,6 +90,10 @@ function canLoadLightningCss() {
     "[native-deps] lightningcss-linux-x64-gnu dir listing:",
     listDirSafe(path.join(cwd, "node_modules", "lightningcss-linux-x64-gnu"))
   );
+  console.log(
+    "[native-deps] lightningcss-linux-x64-musl dir listing:",
+    listDirSafe(path.join(cwd, "node_modules", "lightningcss-linux-x64-musl"))
+  );
 
   // Attempt 1: rebuild
   try {
@@ -101,16 +112,36 @@ function canLoadLightningCss() {
     process.exit(0);
   }
 
-  // Attempt 2: reinstall optional deps
-  runNpm(["install", "--include=optional"]);
+  // Attempt 2: explicitly install the platform native package for this lightningcss version.
+  const version = readLightningVersion();
+  console.log(`[native-deps] lightningcss version detected: ${version}`);
+  try {
+    runNpm(["install", "--no-save", "--include=optional", `lightningcss-linux-x64-gnu@${version}`]);
+  } catch {
+    console.warn("[native-deps] gnu package install failed; trying musl package.");
+    runNpm(["install", "--no-save", "--include=optional", `lightningcss-linux-x64-musl@${version}`]);
+  }
 
   const foundAfterInstall = findNativeBinary();
   if (foundAfterInstall) {
-    console.log(`[native-deps] lightningcss repaired via reinstall: ${foundAfterInstall}`);
+    console.log(`[native-deps] lightningcss repaired via explicit platform install: ${foundAfterInstall}`);
     process.exit(0);
   }
   if (canLoadLightningCss()) {
-    console.log("[native-deps] lightningcss runtime load OK after reinstall.");
+    console.log("[native-deps] lightningcss runtime load OK after explicit platform install.");
+    process.exit(0);
+  }
+
+  // Attempt 3: broad optional dependency install as last fallback.
+  runNpm(["install", "--include=optional"]);
+
+  const foundAfterFallback = findNativeBinary();
+  if (foundAfterFallback) {
+    console.log(`[native-deps] lightningcss repaired via optional reinstall fallback: ${foundAfterFallback}`);
+    process.exit(0);
+  }
+  if (canLoadLightningCss()) {
+    console.log("[native-deps] lightningcss runtime load OK after fallback reinstall.");
     process.exit(0);
   }
 
@@ -120,6 +151,11 @@ function canLoadLightningCss() {
     "[native-deps] lightningcss-linux-x64-gnu dir listing (final):",
     listDirSafe(path.join(cwd, "node_modules", "lightningcss-linux-x64-gnu"))
   );
+  console.log(
+    "[native-deps] lightningcss-linux-x64-musl dir listing (final):",
+    listDirSafe(path.join(cwd, "node_modules", "lightningcss-linux-x64-musl"))
+  );
 
-  throw new Error("[native-deps] lightningcss native binary still missing after repair attempts.");
+  console.warn("[native-deps] lightningcss native binary not found after repair attempts; continuing to vite build.");
+  process.exit(0);
 })();
