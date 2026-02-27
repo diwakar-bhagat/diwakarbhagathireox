@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "build": "npm --prefix client install --include=optional && npm --prefix client run build",
+    "start": "npm --prefix server start"
+  },
   "engines": {
     "node": ">=20.19.0 <23",
     "npm": ">=10"
