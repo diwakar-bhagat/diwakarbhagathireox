@@ -2,6 +2,7 @@ import express from "express"
 import dotenv from "dotenv"
 import connectDb from "./config/connectDb.js"
 import cookieParser from "cookie-parser"
+import mongoose from "mongoose"
 dotenv.config()
 import cors from "cors"
 import authRouter from "./routes/auth.route.js"
@@ -10,6 +11,7 @@ import interviewRouter from "./routes/interview.route.js"
 import paymentRouter from "./routes/payment.route.js"
 import oxbotRouter from "./routes/oxbot.route.js"
 const app = express()
+const isProduction = process.env.NODE_ENV === "production";
 
 const normalizeOrigin = (value) => value.replace(/\/+$/, "");
 const defaultOrigins = [
@@ -64,6 +66,26 @@ app.use("/api/user", userRouter)
 app.use("/api/interview", interviewRouter)
 app.use("/api/payment", paymentRouter)
 app.use("/api/oxbot", oxbotRouter)
+
+const dbReadyStateLabels = {
+    0: "disconnected",
+    1: "connected",
+    2: "connecting",
+    3: "disconnecting",
+};
+
+app.get("/health", (req, res) => {
+    const dbState = dbReadyStateLabels[mongoose.connection.readyState] || "unknown";
+    const degraded = dbState !== "connected";
+    const statusCode = isProduction && degraded ? 503 : 200;
+    return res.status(statusCode).json({
+        status: degraded ? "degraded" : "ok",
+        db: dbState,
+        uptimeSeconds: Math.round(process.uptime()),
+        timestamp: new Date().toISOString(),
+    });
+});
+
 app.use((err, req, res, next) => {
     if (!err) {
         next();
@@ -91,7 +113,15 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 6000
 
 const startServer = async () => {
-    await connectDb();
+    if (isProduction) {
+        await connectDb();
+    } else {
+        try {
+            await connectDb();
+        } catch (error) {
+            console.error(`[db] Development mode: starting without DB connection (${error.message})`);
+        }
+    }
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`)
     });
