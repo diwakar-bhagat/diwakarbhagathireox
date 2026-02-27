@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence, motion as Motion, useReducedMotion } from "motion/react";
 import axios from "axios";
 import { getRedirectResult, onAuthStateChanged } from "firebase/auth";
@@ -244,6 +244,7 @@ function App() {
               <Route path='/history' element={<InterviewHistory />} />
               <Route path='/pricing' element={<Pricing />} />
               <Route path='/report/:id' element={<InterviewReport />} />
+              <Route path='*' element={<Navigate to='/' replace />} />
             </Routes>
           </Motion.div>
         </AnimatePresence>

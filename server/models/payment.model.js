@@ -16,6 +16,15 @@ const paymentSchema = new mongoose.Schema({
       enum: ["created", "paid", "failed"],
       default: "created",
     },
+    creditsGranted: {
+      type: Boolean,
+      default: false,
+    },
+    webhookEventIds: {
+      type: [String],
+      default: [],
+    },
+    lastWebhookAt: Date,
 },{timestamps:true})
 
 const Payment = mongoose.model("Payment",paymentSchema)
