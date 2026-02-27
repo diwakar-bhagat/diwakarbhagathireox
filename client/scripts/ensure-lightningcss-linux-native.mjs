@@ -1,103 +1,58 @@
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
-import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
+
+const cwd = process.cwd();
+const pkgDir = path.join(cwd, "node_modules", "lightningcss");
+const pkgJson = path.join(pkgDir, "package.json");
 
 if (!(process.platform === "linux" && process.arch === "x64")) {
   process.exit(0);
 }
 
-const require = createRequire(import.meta.url);
-const nativePackageName = "lightningcss-linux-x64-gnu";
+const nativeBin = path.join(pkgDir, "lightningcss.linux-x64-gnu.node");
 
-const run = (command) => {
-  console.log(`[build] ${command}`);
-  execSync(command, { stdio: "inherit" });
-};
-
-const resolveLightningPackage = () => {
+const exists = (targetPath) => {
   try {
-    return require.resolve("lightningcss/package.json");
-  } catch {
-    throw new Error("Unable to resolve lightningcss package. Ensure dependencies are installed first.");
-  }
-};
-
-const getLightningDetails = () => {
-  const packagePath = resolveLightningPackage();
-  const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-  const packageDir = path.dirname(packagePath);
-  const binaryPath = path.join(packageDir, "node", "lightningcss.linux-x64-gnu.node");
-  const nativeVersion = packageJson.optionalDependencies?.[nativePackageName] || packageJson.version;
-  return {
-    binaryPath,
-    packageVersion: packageJson.version,
-    nativeVersion,
-  };
-};
-
-const canLoadLightningCss = () => {
-  try {
-    require("lightningcss");
+    fs.accessSync(targetPath);
     return true;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[build] lightningcss load failed: ${message}`);
+  } catch {
     return false;
   }
 };
 
-const isHealthy = () => {
-  const details = getLightningDetails();
-  const hasBinary = fs.existsSync(details.binaryPath);
-  const loads = canLoadLightningCss();
-  return hasBinary && loads;
+const run = (command, args) => {
+  execFileSync(command, args, { stdio: "inherit", cwd });
 };
 
-if (isHealthy()) {
+if (!exists(pkgJson)) {
+  console.log("[native-deps] lightningcss not found in node_modules; skipping check.");
   process.exit(0);
 }
 
-const details = getLightningDetails();
-console.warn(
-  `[build] Missing or broken lightningcss Linux native binary at ${details.binaryPath}. Attempting repair...`
-);
-
-try {
-  run("npm rebuild lightningcss");
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.warn(`[build] npm rebuild lightningcss failed: ${message}`);
-}
-
-if (isHealthy()) {
+if (exists(nativeBin)) {
+  console.log("[native-deps] lightningcss native binary OK.");
   process.exit(0);
 }
 
+console.log("[native-deps] lightningcss native binary missing. Attempting repair...");
+
 try {
-  run(
-    `npm install --no-save --no-package-lock --include=optional ${nativePackageName}@${details.nativeVersion}`
-  );
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.warn(`[build] native package install failed: ${message}`);
+  run("npm", ["rebuild", "lightningcss"]);
+} catch {
+  console.warn("[native-deps] npm rebuild lightningcss failed, trying reinstall with optional deps...");
 }
 
-if (isHealthy()) {
+if (exists(nativeBin)) {
+  console.log("[native-deps] lightningcss repaired via rebuild.");
   process.exit(0);
 }
 
-try {
-  run(
-    `npm install --no-save --no-package-lock --include=optional lightningcss@${details.packageVersion}`
-  );
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.warn(`[build] lightningcss reinstall failed: ${message}`);
+run("npm", ["install", "--include=optional"]);
+
+if (exists(nativeBin)) {
+  console.log("[native-deps] lightningcss repaired via reinstall.");
+  process.exit(0);
 }
 
-if (!isHealthy()) {
-  throw new Error(
-    "Unable to recover lightningcss Linux native binary. Re-run install with: npm ci --include=optional"
-  );
-}
+throw new Error("[native-deps] lightningcss native binary still missing after repair attempts.");

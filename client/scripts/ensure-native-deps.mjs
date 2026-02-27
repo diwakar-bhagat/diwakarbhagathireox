@@ -10,5 +10,5 @@ const runScript = (scriptName) => {
   execFileSync(process.execPath, [scriptPath], { stdio: "inherit" });
 };
 
-runScript("ensure-rollup-linux-native.mjs");
 runScript("ensure-lightningcss-linux-native.mjs");
+runScript("ensure-rollup-linux-native.mjs");
