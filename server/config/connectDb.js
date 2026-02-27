@@ -23,7 +23,19 @@ const parseMongoUri = (mongoUri) => {
     throw new Error("MONGODB_URL is missing or malformed. Expected mongodb+srv://.../dbName");
   }
 
-  const databaseName = parsed.pathname?.replace(/^\//, "") || "default";
+  const databaseName = parsed.pathname?.replace(/^\//, "").trim();
+  if (!parsed.hostname) {
+    throw new Error("MONGODB_URL is missing or malformed. Expected mongodb+srv://.../dbName");
+  }
+  if (!databaseName) {
+    throw new Error("MONGODB_URL is missing or malformed. Expected mongodb+srv://.../dbName");
+  }
+  if (parsed.protocol === "mongodb+srv:" && !parsed.hostname.includes(".")) {
+    throw new Error(
+      "MONGODB_URL appears truncated (invalid SRV host). Expected mongodb+srv://...@cluster0.xxxxx.mongodb.net/dbName"
+    );
+  }
+
   return {
     uri: normalized,
     protocol: parsed.protocol,
@@ -49,6 +61,9 @@ const verifySrvLookupIfNeeded = async ({ protocol, hostname }) => {
 
 const connectDb = async () => {
   const mongoUrl = process.env.MONGODB_URL;
+  const configuredUri = typeof mongoUrl === "string" ? sanitizeMongoUri(mongoUrl) : "<empty>";
+  console.log(`[db] configuredMongoUri=${configuredUri}`);
+
   const details = parseMongoUri(mongoUrl);
   const safeUri = sanitizeMongoUri(details.uri);
 
