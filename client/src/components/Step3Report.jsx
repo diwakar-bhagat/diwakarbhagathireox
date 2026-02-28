@@ -71,6 +71,25 @@ function Step3Report({ report }) {
   const extendedReportPayload = reportPayload && typeof reportPayload === "object"
     ? reportPayload
     : null;
+  const overallMetrics = extendedReportPayload?.overall || null;
+  const cognitiveMetrics = extendedReportPayload?.cognitive || null;
+  const atsMetrics = extendedReportPayload?.ats || null;
+  const heatmapSkills = Array.isArray(extendedReportPayload?.heatmap?.skills)
+    ? extendedReportPayload.heatmap.skills
+    : [];
+  const reportQuestions = Array.isArray(extendedReportPayload?.questions)
+    ? extendedReportPayload.questions
+    : [];
+  const cognitiveBreakdown = cognitiveMetrics
+    ? [
+      { label: "Structure", value: Number(formatScore(cognitiveMetrics.structure || 0)) },
+      { label: "Examples", value: Number(formatScore(cognitiveMetrics.examples || 0)) },
+      { label: "Depth", value: Number(formatScore(cognitiveMetrics.depth || 0)) },
+      { label: "Tradeoffs", value: Number(formatScore(cognitiveMetrics.tradeoffs || 0)) },
+      { label: "Clarity", value: Number(formatScore(cognitiveMetrics.clarity || 0)) },
+    ]
+    : [];
+  const topHeatmapSkills = heatmapSkills.slice(0, 6);
 
   const questionScoreData = normalizedQuestionWiseScore.map((score, index) => ({
     name: `Q${index + 1}`,
@@ -388,6 +407,19 @@ function Step3Report({ report }) {
                 {shortTagline}
               </p>
             </div>
+
+            {overallMetrics && (
+              <div className="mt-5 grid grid-cols-2 gap-3 text-left">
+                <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-3 py-3 border border-emerald-100 dark:border-emerald-800/50">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Role Fit</p>
+                  <p className="mt-1 text-lg font-bold text-emerald-800 dark:text-emerald-200">{overallMetrics.roleFitPercent || 0}%</p>
+                </div>
+                <div className="rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-3 border border-slate-200 dark:border-slate-700">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Completion</p>
+                  <p className="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{overallMetrics.completionRatePercent || 0}%</p>
+                </div>
+              </div>
+            )}
           </Motion.div>
 
           <Motion.div
@@ -423,6 +455,88 @@ function Step3Report({ report }) {
             </div>
 
           </Motion.div>
+
+          {cognitiveBreakdown.length > 0 && (
+            <Motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-6 sm:p-8 transition-colors'>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-6">
+                Cognitive Breakdown
+              </h3>
+
+              <div className='space-y-4'>
+                {cognitiveBreakdown.map((metric) => (
+                  <div key={metric.label}>
+                    <div className='flex justify-between mb-2 text-sm sm:text-base text-gray-600 dark:text-gray-300'>
+                      <span>{metric.label}</span>
+                      <span className='font-semibold text-sky-600 dark:text-sky-400'>{formatScore(metric.value)}</span>
+                    </div>
+
+                    <div className='bg-gray-200 dark:bg-slate-800 h-2 sm:h-3 rounded-full overflow-hidden'>
+                      <div
+                        className='bg-sky-500 dark:bg-sky-400 h-full rounded-full transition-all duration-500'
+                        style={{ width: `${metric.value * 10}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Motion.div>
+          )}
+
+          {atsMetrics && (
+            <Motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-6 sm:p-8 transition-colors'>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-5">
+                ATS Summary
+              </h3>
+
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-3 py-3 border border-emerald-100 dark:border-emerald-800/50">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Match</p>
+                  <p className="mt-1 text-lg font-bold text-emerald-800 dark:text-emerald-200">{atsMetrics.matchPercent || 0}%</p>
+                </div>
+                <div className="rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-3 border border-slate-200 dark:border-slate-700">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Matched</p>
+                  <p className="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{atsMetrics.matchedMustHaves?.length || 0}</p>
+                </div>
+                <div className="rounded-xl bg-rose-50 dark:bg-rose-900/20 px-3 py-3 border border-rose-100 dark:border-rose-800/50">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">Missing</p>
+                  <p className="mt-1 text-lg font-bold text-rose-800 dark:text-rose-200">{atsMetrics.missingMustHaves?.length || 0}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Missing Must-Haves</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(atsMetrics.missingMustHaves || []).slice(0, 5).map((item, index) => (
+                      <span key={index} className="text-[10px] sm:text-xs font-medium bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-2 py-1 rounded-md border border-rose-100 dark:border-rose-800/50">
+                        {item}
+                      </span>
+                    ))}
+                    {(!atsMetrics.missingMustHaves || atsMetrics.missingMustHaves.length === 0) && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">No critical must-have gaps.</span>
+                    )}
+                  </div>
+                </div>
+
+                {atsMetrics.notes?.length > 0 && (
+                  <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-purple-800 dark:text-purple-300 mb-2">Recruiter Notes</p>
+                    <ul className="space-y-1 text-sm text-purple-700 dark:text-purple-400">
+                      {atsMetrics.notes.slice(0, 3).map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </Motion.div>
+          )}
 
 
         </div>
@@ -462,6 +576,48 @@ function Step3Report({ report }) {
 
           </Motion.div>
 
+          {topHeatmapSkills.length > 0 && (
+            <Motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-5 sm:p-8 transition-colors'>
+              <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6'>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200">
+                  Skill Heatmap
+                </h3>
+                <span className='text-xs font-semibold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'>
+                  Coverage {extendedReportPayload?.heatmap?.completionRatePercent || 0}%
+                </span>
+              </div>
+
+              <div className='space-y-4'>
+                {topHeatmapSkills.map((item) => (
+                  <div key={item.skill} className='rounded-xl border border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/30 p-4'>
+                    <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
+                      <div>
+                        <p className='font-semibold text-gray-800 dark:text-gray-100'>{item.skill}</p>
+                        <div className='mt-2 flex flex-wrap gap-2'>
+                          <span className={`text-[10px] sm:text-xs font-medium px-2 py-1 rounded-md border ${item.jd_required ? "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50" : "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"}`}>
+                            {item.jd_required ? "JD Required" : "JD Optional"}
+                          </span>
+                          <span className={`text-[10px] sm:text-xs font-medium px-2 py-1 rounded-md border ${item.resume_claimed ? "bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800/50" : "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50"}`}>
+                            {item.resume_claimed ? "Resume Claimed" : "Not On Resume"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className='text-left sm:text-right'>
+                        <p className='text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400'>Demonstrated</p>
+                        <p className='font-semibold text-gray-800 dark:text-gray-100 capitalize'>{item.demonstrated}</p>
+                        <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>Gap: <span className='capitalize'>{item.gap}</span></p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Motion.div>
+          )}
+
           <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -472,6 +628,15 @@ function Step3Report({ report }) {
             <div className='space-y-6'>
               {normalizedQuestionWiseScore.map((q, i) => (
                 <div key={i} className='bg-gray-50 dark:bg-slate-800/40 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-slate-700/50'>
+                  {reportQuestions[i]?.taggedSkills?.length > 0 && (
+                    <div className='mb-3 flex flex-wrap gap-2'>
+                      {reportQuestions[i].taggedSkills.slice(0, 4).map((skill, skillIndex) => (
+                        <span key={skillIndex} className='text-[10px] sm:text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-1 rounded-md border border-emerald-100 dark:border-emerald-800/50'>
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   <div className='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4'>
                     <div>
@@ -501,6 +666,17 @@ function Step3Report({ report }) {
                         : "No feedback available for this question."}
                     </p>
                   </div>
+
+                  {reportQuestions[i]?.evaluation?.coaching_tip && (
+                    <div className='mt-3 bg-sky-50 dark:bg-sky-900/10 border border-sky-100 dark:border-sky-800/30 p-4 rounded-lg'>
+                      <p className='text-xs text-sky-600 dark:text-sky-400 font-semibold mb-1'>
+                        Coaching Tip
+                      </p>
+                      <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium'>
+                        {reportQuestions[i].evaluation.coaching_tip}
+                      </p>
+                    </div>
+                  )}
 
                 </div>
               ))}
