@@ -22,10 +22,14 @@ const normalizeDensity = (value) => {
 
 const normalizeSessionState = (sessionState) => {
   const safeState = sessionState && typeof sessionState === "object" ? sessionState : {};
-  const difficulty = Number(safeState.current_difficulty);
+  const rawDifficulty = safeState.current_difficulty ?? safeState.difficulty_level;
+  const difficulty = Number(rawDifficulty);
 
   return {
     current_difficulty: Number.isFinite(difficulty)
+      ? Math.min(5, Math.max(1, Math.round(difficulty)))
+      : 2,
+    difficulty_level: Number.isFinite(difficulty)
       ? Math.min(5, Math.max(1, Math.round(difficulty)))
       : 2,
     weakness_tags: normalizeTextList(safeState.weakness_tags),
@@ -36,6 +40,7 @@ const normalizeSessionState = (sessionState) => {
     strategy_history: normalizeTextList(safeState.strategy_history),
     question_history: normalizeTextList(safeState.question_history),
     focus_areas: normalizeTextList(safeState.focus_areas),
+    last_strategy: typeof safeState.last_strategy === "string" ? safeState.last_strategy.trim() : "",
   };
 };
 
@@ -45,6 +50,8 @@ const buildWeaknessTags = (evaluation) => {
   if (evaluation.implementation_depth < 6) tags.push("implementation_depth");
   if (evaluation.tradeoff_awareness < 6) tags.push("tradeoff_awareness");
   if (evaluation.clarity < 6) tags.push("clarity");
+  if (evaluation.structure < 6) tags.push("structure");
+  if (evaluation.example_usage < 6) tags.push("example_usage");
   if (evaluation.confidence < 6) tags.push("confidence");
   if (evaluation.vagueness_flag) tags.push("vagueness");
   if (evaluation.buzzword_density === "high") tags.push("buzzword_overuse");
@@ -57,6 +64,8 @@ const buildStrengthTags = (evaluation) => {
   if (evaluation.implementation_depth >= 8) tags.push("implementation_depth");
   if (evaluation.tradeoff_awareness >= 8) tags.push("tradeoff_awareness");
   if (evaluation.clarity >= 8) tags.push("clarity");
+  if (evaluation.structure >= 8) tags.push("structure");
+  if (evaluation.example_usage >= 8) tags.push("example_usage");
   if (evaluation.confidence >= 8) tags.push("confidence");
   return tags;
 };
@@ -73,7 +82,10 @@ const chooseStrategy = (evaluation) => {
   const strongAllCore =
     evaluation.conceptual_correctness > 7 &&
     evaluation.implementation_depth > 7 &&
-    evaluation.tradeoff_awareness > 7;
+    evaluation.tradeoff_awareness > 7 &&
+    evaluation.clarity > 7 &&
+    evaluation.structure > 7 &&
+    evaluation.example_usage > 7;
 
   if (strongAllCore) {
     return "increase_difficulty";
@@ -81,14 +93,19 @@ const chooseStrategy = (evaluation) => {
 
   if (lowest.value < 5) {
     if (lowest.key === "conceptual_correctness") return "clarify";
+    if (lowest.key === "tradeoff_awareness") return "ask_tradeoff";
     return "probe_deeper";
+  }
+
+  if (evaluation.example_usage < 5) {
+    return "ask_example";
   }
 
   if (evaluation.buzzword_density === "high") {
     return "ask_example";
   }
 
-  if (evaluation.vagueness_flag || evaluation.clarity < 5) {
+  if (evaluation.vagueness_flag || evaluation.clarity < 5 || evaluation.structure < 5) {
     return "clarify";
   }
 
@@ -105,6 +122,8 @@ export const runDecisionEngine = ({ evaluation, sessionState }) => {
     implementation_depth: clampScore(evaluation?.implementation_depth),
     tradeoff_awareness: clampScore(evaluation?.tradeoff_awareness),
     clarity: clampScore(evaluation?.clarity),
+    structure: clampScore(evaluation?.structure),
+    example_usage: clampScore(evaluation?.example_usage),
     confidence: clampScore(evaluation?.confidence),
     vagueness_flag: Boolean(evaluation?.vagueness_flag),
     buzzword_density: normalizeDensity(evaluation?.buzzword_density),
@@ -153,10 +172,12 @@ export const runDecisionEngine = ({ evaluation, sessionState }) => {
     updated_session_state: {
       ...currentState,
       current_difficulty: nextDifficulty,
+      difficulty_level: nextDifficulty,
       weakness_tags: weaknessTags,
       strengths,
       confidence_score: updatedConfidenceScore,
       strategy_history: strategyHistory,
+      last_strategy: nextStrategy,
     },
   };
 };

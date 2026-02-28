@@ -48,6 +48,7 @@ function Step3Report({ report }) {
     communication = 0,
     correctness = 0,
     questionWiseScore = [],
+    reportPayload = null,
   } = report;
 
   const formatScore = (value) => {
@@ -67,6 +68,9 @@ function Step3Report({ report }) {
     communication: Number(formatScore(item?.communication || 0)),
     correctness: Number(formatScore(item?.correctness || 0)),
   }));
+  const extendedReportPayload = reportPayload && typeof reportPayload === "object"
+    ? reportPayload
+    : null;
 
   const questionScoreData = normalizedQuestionWiseScore.map((score, index) => ({
     name: `Q${index + 1}`,
@@ -210,6 +214,99 @@ function Step3Report({ report }) {
         fillColor: [249, 250, 251],
       },
     });
+
+    currentY = (doc.lastAutoTable?.finalY || currentY) + 12;
+
+    if (extendedReportPayload?.ats) {
+      if (currentY > 245) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(0, 0, 0);
+      doc.text("ATS Match Summary", margin, currentY);
+      currentY += 8;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      const atsLines = [
+        `Match: ${extendedReportPayload.ats.matchPercent || 0}%`,
+        `Matched Must-Haves: ${(extendedReportPayload.ats.matchedMustHaves || []).join(", ") || "None"}`,
+        `Missing Must-Haves: ${(extendedReportPayload.ats.missingMustHaves || []).join(", ") || "None"}`,
+      ];
+      const atsText = doc.splitTextToSize(atsLines.join("\n"), contentWidth);
+      doc.text(atsText, margin, currentY);
+      currentY += atsText.length * 5 + 6;
+    }
+
+    if (extendedReportPayload?.heatmap?.skills?.length) {
+      if (currentY > 230) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      autoTable(doc, {
+        startY: currentY,
+        margin: { left: margin, right: margin },
+        head: [["Skill", "JD", "Resume", "Demo", "Gap"]],
+        body: extendedReportPayload.heatmap.skills.slice(0, 12).map((item) => ([
+          item.skill,
+          item.jd_required ? "Yes" : "No",
+          item.resume_claimed ? "Yes" : "No",
+          item.demonstrated,
+          item.gap,
+        ])),
+        styles: {
+          fontSize: 9,
+          cellPadding: 4,
+        },
+        headStyles: {
+          fillColor: [15, 118, 110],
+          textColor: 255,
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+      });
+      currentY = (doc.lastAutoTable?.finalY || currentY) + 12;
+    }
+
+    if (extendedReportPayload?.blueprint?.days?.length) {
+      if (currentY > 220) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      autoTable(doc, {
+        startY: currentY,
+        margin: { left: margin, right: margin },
+        head: [["Day", "Focus", "Tasks"]],
+        body: extendedReportPayload.blueprint.days.slice(0, 7).map((item) => ([
+          `${item.day}`,
+          item.title,
+          Array.isArray(item.tasks) ? item.tasks.join(" | ") : "",
+        ])),
+        styles: {
+          fontSize: 8,
+          cellPadding: 4,
+          valign: "top",
+        },
+        headStyles: {
+          fillColor: [34, 197, 94],
+          textColor: 255,
+        },
+        columnStyles: {
+          0: { cellWidth: 12, halign: "center" },
+          1: { cellWidth: 35 },
+          2: { cellWidth: "auto" },
+        },
+        alternateRowStyles: {
+          fillColor: [249, 250, 251],
+        },
+      });
+    }
 
 
     doc.setProperties({ title: "AI Interview Performance Report" });
