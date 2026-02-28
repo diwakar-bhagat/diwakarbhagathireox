@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion as Motion } from "motion/react";
 import { BsCoin, BsRobot } from "react-icons/bs";
@@ -8,8 +8,9 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ServerUrl } from "../App";
 import { setUserData } from "../redux/userSlice";
-import AuthModel from "./AuthModel";
 import ThemeToggle from "./ThemeToggle";
+
+const AuthModel = lazy(() => import("./AuthModel"));
 
 function Navbar() {
   const { userData } = useSelector((state) => state.user);
@@ -159,7 +160,11 @@ function Navbar() {
       </div>
 
       <div aria-hidden className="h-[90px] sm:h-[104px] lg:h-[112px]" />
-      {showAuth && <AuthModel onClose={() => setShowAuth(false)} />}
+      {showAuth && (
+        <Suspense fallback={null}>
+          <AuthModel onClose={() => setShowAuth(false)} />
+        </Suspense>
+      )}
     </>
   );
 }

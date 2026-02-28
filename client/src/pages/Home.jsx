@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import Navbar from '../components/Navbar'
 import { useSelector } from 'react-redux'
 import { motion as Motion } from "motion/react";
@@ -12,7 +12,6 @@ import {
 import { HiSparkles } from "react-icons/hi";
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import AuthModel from '../components/AuthModel';
 import hrImg from "../assets/HR.png";
 import techImg from "../assets/tech.png";
 import confidenceImg from "../assets/confi.png";
@@ -23,6 +22,7 @@ import pdfImg from "../assets/pdf.png";
 import analyticsImg from "../assets/history.png";
 import Footer from '../components/Footer';
 
+const AuthModel = lazy(() => import('../components/AuthModel'));
 
 function Home() {
   const { userData } = useSelector((state) => state.user)
@@ -304,7 +304,11 @@ function Home() {
         </div>
       </div>
 
-      {showAuth && <AuthModel onClose={() => setShowAuth(false)} />}
+      {showAuth && (
+        <Suspense fallback={null}>
+          <AuthModel onClose={() => setShowAuth(false)} />
+        </Suspense>
+      )}
 
         <Footer/>
 

@@ -1,5 +1,4 @@
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { db } from "../utils/firebase";
+import { app } from "../utils/firebase";
 
 const NEWSLETTER_COLLECTION = "newsletter_subscribers";
 const EMAIL_REGEX = /\S+@\S+\.\S+/;
@@ -13,6 +12,9 @@ export const subscribeToNewsletter = async (email, source = "footer") => {
   if (!EMAIL_REGEX.test(normalizedEmail)) {
     throw new Error("Please enter a valid email address.");
   }
+
+  const { doc, getDoc, getFirestore, serverTimestamp, setDoc } = await import("firebase/firestore");
+  const db = getFirestore(app);
 
   const subscriberRef = doc(db, NEWSLETTER_COLLECTION, normalizedEmail);
   const existingSubscriber = await getDoc(subscriberRef);
