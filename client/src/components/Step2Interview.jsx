@@ -365,11 +365,13 @@ function Step2Interview({ interviewData, onFinish }) {
         });
       }
 
-      if (result.data.nextStrategy || result.data.sessionState) {
+      if (result.data.nextStrategy || result.data.sessionState || result.data.evaluation) {
         setAgentMeta({
           strategy: result.data.nextStrategy,
           difficulty: result.data.sessionState?.current_difficulty,
-          weakness: result.data.sessionState?.weakness_tags?.slice(0, 2) || []
+          weakness: result.data.sessionState?.weakness_tags?.slice(0, 2) || [],
+          coachingTip: result.data.evaluation?.coaching_tip || null,
+          missingElements: result.data.evaluation?.missing_elements || []
         });
       }
 
@@ -587,6 +589,16 @@ function Step2Interview({ interviewData, onFinish }) {
               Question {currentIndex + 1} of {dynamicQuestions.length}
             </p>
 
+            {currentQuestion?.taggedSkills?.length > 0 && (
+              <div className='flex flex-wrap gap-1.5 mb-3'>
+                {currentQuestion.taggedSkills.map((skill, i) => (
+                  <span key={i} className='text-[10px] sm:text-[11px] font-medium bg-gray-200/50 text-gray-600 dark:bg-slate-700/50 dark:text-slate-300 px-2 py-0.5 rounded-md border border-gray-300/50 dark:border-slate-600/50'>
+                    Tested: {skill}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <Motion.div
               key={currentIndex}
               initial={{ opacity: 0, x: 5 }}
@@ -631,44 +643,68 @@ function Step2Interview({ interviewData, onFinish }) {
             className="flex-1 bg-gray-100 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl resize-none outline-none border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-600 transition text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500" />
 
 
-          {!feedback ? (<div className='mt-6 space-y-3'>
-            <div className='flex items-center gap-4'>
-              <Motion.button
-                onClick={toggleMic}
-                disabled={!micSupported}
-                whileTap={{ scale: 0.9 }}
-                className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black dark:bg-emerald-600 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed'>
-                {isMicOn ? <FaMicrophone size={20} /> : <FaMicrophoneSlash size={20} />}
-              </Motion.button>
+          {!feedback ? (
+            <div className='mt-6 space-y-3'>
+              <div className='flex items-center gap-4'>
+                <Motion.button
+                  onClick={toggleMic}
+                  disabled={!micSupported}
+                  whileTap={{ scale: 0.9 }}
+                  className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black dark:bg-emerald-600 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed'>
+                  {isMicOn ? <FaMicrophone size={20} /> : <FaMicrophoneSlash size={20} />}
+                </Motion.button>
 
-              <Motion.button
-                onClick={submitAnswer}
-                disabled={isSubmitting}
-                whileTap={{ scale: 0.95 }}
-                className='flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white py-3 sm:py-4 rounded-2xl shadow-lg hover:opacity-90 transition font-semibold disabled:bg-gray-500 dark:disabled:bg-slate-800'>
-                {isSubmitting ? "Submitting..." : "Submit Answer"}
+                <Motion.button
+                  onClick={submitAnswer}
+                  disabled={isSubmitting}
+                  whileTap={{ scale: 0.95 }}
+                  className='flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white py-3 sm:py-4 rounded-2xl shadow-lg hover:opacity-90 transition font-semibold disabled:bg-gray-500 dark:disabled:bg-slate-800'>
+                  {isSubmitting ? "Submitting..." : "Submit Answer"}
+                </Motion.button>
+              </div>
 
-              </Motion.button>
-
+              {aiThinking && (
+                <AIThinkingIndicator className='w-full justify-center' />
+              )}
             </div>
-
-            {aiThinking && (
-              <AIThinkingIndicator className='w-full justify-center' />
-            )}
-          </div>) : (
+          ) : (
             <Motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className='mt-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 p-5 rounded-2xl shadow-sm'>
-              <p className='text-emerald-700 dark:text-emerald-300 font-medium mb-4'>{feedback}</p>
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className='mt-6 space-y-4'
+            >
+              <div className='bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 p-5 rounded-2xl shadow-sm'>
+                <h4 className='text-[11px] uppercase tracking-wide font-bold text-emerald-800 dark:text-emerald-400 mb-2'>AI Feedback</h4>
+                <p className='text-emerald-700 dark:text-emerald-300 font-medium'>{feedback}</p>
+              </div>
+
+              {agentMeta && agentMeta.coachingTip && (
+                <div className='bg-sky-50 dark:bg-sky-900/10 border border-sky-100 dark:border-sky-800/30 p-4 rounded-xl shadow-sm'>
+                  <h4 className='text-[11px] uppercase tracking-wide font-bold text-sky-800 dark:text-sky-400 mb-1'>Actionable Tip</h4>
+                  <p className='text-sm text-sky-700 dark:text-sky-300 font-medium'>{agentMeta.coachingTip}</p>
+                </div>
+              )}
+
+              {agentMeta && agentMeta.missingElements?.length > 0 && (
+                <div className='bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 p-4 rounded-xl shadow-sm'>
+                  <h4 className='text-[11px] uppercase tracking-wide font-bold text-amber-800 dark:text-amber-400 mb-2 flex items-center gap-1.5'>
+                    Missed Opportunities
+                  </h4>
+                  <ul className='flex flex-wrap gap-1.5'>
+                    {agentMeta.missingElements.slice(0, 3).map((item, i) => (
+                      <li key={i} className='text-[10px] sm:text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-1 rounded border border-amber-200 dark:border-amber-800/50'>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <button
                 onClick={handleNext}
-
-                className='w-full bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white py-3 rounded-xl shadow-md hover:opacity-90 transition flex items-center justify-center gap-1 font-semibold'>
+                className='w-full bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white py-3 sm:py-4 rounded-xl shadow-md hover:opacity-90 transition flex items-center justify-center gap-2 font-semibold'>
                 Next Question <BsArrowRight size={18} />
               </button>
-
             </Motion.div>
           )}
         </div>

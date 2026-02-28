@@ -831,12 +831,45 @@ function Step3Report({ report }) {
 
                   {reportQuestions[i]?.evaluation?.coaching_tip && (
                     <div className='mt-3 bg-sky-50 dark:bg-sky-900/10 border border-sky-100 dark:border-sky-800/30 p-4 rounded-lg'>
-                      <p className='text-xs text-sky-600 dark:text-sky-400 font-semibold mb-1'>
-                        Coaching Tip
+                      <p className='text-[11px] uppercase tracking-wide text-sky-700 dark:text-sky-400 font-bold mb-1 flex items-center gap-1.5'>
+                        🚀 Coaching Tip
                       </p>
-                      <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium'>
+                      <p className='text-sm text-sky-900 dark:text-sky-200 leading-relaxed font-medium'>
                         {reportQuestions[i].evaluation.coaching_tip}
                       </p>
+                    </div>
+                  )}
+
+                  {reportQuestions[i]?.evaluation?.missing_elements?.length > 0 && (
+                    <div className='mt-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 p-4 rounded-lg'>
+                      <p className='text-[11px] uppercase tracking-wide text-amber-700 dark:text-amber-400 font-bold mb-2 flex items-center gap-1.5'>
+                        ⚠️ Missed Opportunities
+                      </p>
+                      <ul className='flex flex-wrap gap-1.5'>
+                        {reportQuestions[i].evaluation.missing_elements.map((item, mIdx) => (
+                          <li key={mIdx} className='text-[10px] sm:text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-1 rounded border border-amber-200 dark:border-amber-800/50'>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {reportQuestions[i]?.evaluation && (
+                    <div className='mt-4 pt-4 border-t border-gray-200/50 dark:border-slate-700/50'>
+                      <div className='grid grid-cols-2 sm:grid-cols-4 gap-3'>
+                        {[
+                          { label: 'Structure', val: reportQuestions[i].evaluation.structure },
+                          { label: 'Depth', val: reportQuestions[i].evaluation.implementation_depth },
+                          { label: 'Tradeoffs', val: reportQuestions[i].evaluation.tradeoff_awareness },
+                          { label: 'Clarity', val: reportQuestions[i].evaluation.clarity }
+                        ].map((metric, mIdx) => metric.val !== undefined && (
+                          <div key={mIdx} className='flex flex-col'>
+                            <span className='text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold'>{metric.label}</span>
+                            <span className='text-sm font-bold text-gray-800 dark:text-gray-200'>{formatScore(metric.val)}/10</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
