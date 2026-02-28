@@ -23,7 +23,7 @@ import DebugPanel from './DebugPanel';
 
 function Step1SetUp({ onStart }) {
     const { userData } = useSelector((state) => state.user);
-    const { resumeAnalysis, jdAnalysis, gapAnalysis, interviewPlan } = useSelector((state) => state.wizard);
+    const { resumeAnalysis, jdAnalysis, atsMatch, gapAnalysis, interviewPlan } = useSelector((state) => state.wizard);
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -163,6 +163,7 @@ function Step1SetUp({ onStart }) {
                 jdAnalysis: jdAnalysis || null,
                 gapAnalysis: gapAnalysis || null,
                 interviewPlan: interviewPlan || null,
+                atsMatch: atsMatch || null,
             };
 
             const result = await axios.post(ServerUrl + "/api/interview/generate-questions", payload, { withCredentials: true });
@@ -289,20 +290,38 @@ function Step1SetUp({ onStart }) {
                                     <div className="flex items-center gap-4">
                                         <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center border-[4px] border-emerald-50 dark:border-emerald-900">
                                             <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                                                {gapAnalysis ? `${gapAnalysis.matchPercentage}%` : "100%"}
+                                                {atsMatch
+                                                    ? `${atsMatch.matchPercent}%`
+                                                    : gapAnalysis
+                                                        ? `${gapAnalysis.matchPercentage}%`
+                                                        : "100%"}
                                             </span>
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-lg">
-                                                {gapAnalysis ? "JD Match Score" : "Role Alignment"}
+                                                {atsMatch ? "ATS Match" : gapAnalysis ? "JD Match Score" : "Role Alignment"}
                                             </h3>
                                             <p className="text-sm text-gray-500 dark:text-gray-400 leading-snug">
-                                                {gapAnalysis
-                                                    ? "Based on parsed required and preferred skills."
+                                                {atsMatch
+                                                    ? "Weighted against must-haves, keyword coverage, and weak evidence areas."
+                                                    : gapAnalysis
+                                                        ? "Based on parsed required and preferred skills."
                                                     : "Resume-based role alignment generated successfully."}
                                             </p>
                                         </div>
                                     </div>
+                                    {atsMatch && (
+                                        <div className="mt-4 grid grid-cols-2 gap-3">
+                                            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 border border-emerald-100 dark:border-emerald-800/50">
+                                                <div className="text-[11px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">Resume Coverage</div>
+                                                <div className="mt-1 text-lg font-bold text-emerald-800 dark:text-emerald-200">{atsMatch.resumeKeywordCoverage || 0}%</div>
+                                            </div>
+                                            <div className="rounded-xl bg-slate-100 dark:bg-slate-700/60 px-3 py-2 border border-slate-200 dark:border-slate-600">
+                                                <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-300 font-semibold">JD Coverage</div>
+                                                <div className="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{atsMatch.jdKeywordCoverage || 0}%</div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Transparency Panel */}
@@ -352,6 +371,38 @@ function Step1SetUp({ onStart }) {
                                     </div>
                                 </div>
 
+                                {atsMatch && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700">
+                                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">Matched Must-Haves</h4>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {(atsMatch.matchedMustHaves || []).slice(0, 5).map((item, index) => (
+                                                    <span key={index} className="text-[10px] sm:text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-1 rounded-md border border-emerald-100 dark:border-emerald-800/50">
+                                                        {item}
+                                                    </span>
+                                                ))}
+                                                {(!atsMatch.matchedMustHaves || atsMatch.matchedMustHaves.length === 0) && (
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">No confirmed strong matches yet.</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700">
+                                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">Missing Must-Haves</h4>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {(atsMatch.missingMustHaves || []).slice(0, 5).map((item, index) => (
+                                                    <span key={index} className="text-[10px] sm:text-xs font-medium bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-2 py-1 rounded-md border border-rose-100 dark:border-rose-800/50">
+                                                        {item}
+                                                    </span>
+                                                ))}
+                                                {(!atsMatch.missingMustHaves || atsMatch.missingMustHaves.length === 0) && (
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">No critical skill gaps detected.</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Candidate Signal Extractor */}
                                 <div>
                                     <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Candidate Signals</h4>
@@ -366,11 +417,11 @@ function Step1SetUp({ onStart }) {
                                 </div>
 
                                 {/* ATS Improvement */}
-                                {gapAnalysis && gapAnalysis.atsSignals?.suggestions?.length > 0 && (
+                                {((atsMatch && atsMatch.notes?.length > 0) || (gapAnalysis && gapAnalysis.atsSignals?.suggestions?.length > 0)) && (
                                     <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl p-4">
                                         <h4 className="text-xs font-semibold text-purple-800 dark:text-purple-300 uppercase mb-2">ATS Optimization Tips</h4>
                                         <ul className="text-sm text-purple-700 dark:text-purple-400 space-y-1 ml-4 list-disc">
-                                            {gapAnalysis.atsSignals.suggestions.slice(0, 3).map((tip, i) => <li key={i}>{tip}</li>)}
+                                            {(atsMatch?.notes?.length ? atsMatch.notes : gapAnalysis?.atsSignals?.suggestions || []).slice(0, 3).map((tip, i) => <li key={i}>{tip}</li>)}
                                         </ul>
                                     </div>
                                 )}

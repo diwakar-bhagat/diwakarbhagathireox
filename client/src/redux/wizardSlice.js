@@ -5,6 +5,7 @@ export const wizardSlice = createSlice({
     initialState: {
         resumeAnalysis: null,
         jdAnalysis: null,
+        atsMatch: null,
         gapAnalysis: null,
         interviewPlan: null,
     },
@@ -14,12 +15,14 @@ export const wizardSlice = createSlice({
         },
         setJdData: (state, action) => {
             state.jdAnalysis = action.payload.jd;
+            state.atsMatch = action.payload.atsMatch;
             state.gapAnalysis = action.payload.gapAnalysis;
             state.interviewPlan = action.payload.interviewPlan;
         },
         clearWizardData: (state) => {
             state.resumeAnalysis = null;
             state.jdAnalysis = null;
+            state.atsMatch = null;
             state.gapAnalysis = null;
             state.interviewPlan = null;
         }
