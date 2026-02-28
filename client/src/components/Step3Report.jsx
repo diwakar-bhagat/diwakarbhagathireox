@@ -1,13 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { motion as Motion } from "motion/react"
-import { buildStyles, CircularProgressbar } from 'react-circular-progressbar';
-import 'react-circular-progressbar/dist/styles.css';
-import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts"
-import jsPDF from "jspdf"
-import autoTable from "jspdf-autotable"
 import ChartBarsSkeleton from './loaders/ChartBarsSkeleton';
+
+const ReportTrendChart = lazy(() => import('./ReportTrendChart'));
+const ReportScoreRing = lazy(() => import('./ReportScoreRing'));
 
 function Step3Report({ report }) {
   const navigate = useNavigate()
@@ -136,7 +134,12 @@ function Step3Report({ report }) {
   const percentage = (score / 10) * 100;
 
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+
     const fileName = "AI_Interview_Report.pdf";
     const doc = new jsPDF("p", "mm", "a4");
 
@@ -417,17 +420,18 @@ function Step3Report({ report }) {
               Overall Performance
             </h3>
             <div className='relative w-20 h-20 sm:w-25 sm:h-25 mx-auto'>
-              <CircularProgressbar
-                value={percentage}
-                text={`${formatScore(score)}/10`}
-                styles={buildStyles({
-                  textSize: "18px",
-                  pathColor: "#10b981",
-                  textColor: "#10b981", // Changed from #ef4444 for consistency
-                  trailColor: "currentColor",
-                })}
-                className="text-gray-200 dark:text-slate-800"
-              />
+              <Suspense
+                fallback={
+                  <div className="h-full w-full rounded-full border-8 border-gray-200 dark:border-slate-800 flex items-center justify-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                    {formatScore(score)}/10
+                  </div>
+                }
+              >
+                <ReportScoreRing
+                  value={percentage}
+                  text={`${formatScore(score)}/10`}
+                />
+              </Suspense>
             </div>
 
             <p className="text-gray-400 dark:text-gray-500 mt-3 text-xs sm:text-sm">
@@ -640,21 +644,13 @@ function Step3Report({ report }) {
 
             <div ref={chartContainerRef} className='h-64 sm:h-72 w-full min-w-0'>
               {chartSize.width > 0 && chartSize.height > 0 ? (
-                <AreaChart width={chartSize.width} height={chartSize.height} data={questionScoreData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:opacity-10" />
-                  <XAxis dataKey="name" stroke="currentColor" className="text-gray-400 dark:text-gray-600" />
-                  <YAxis domain={[0, 10]} stroke="currentColor" className="text-gray-400 dark:text-gray-600" />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'var(--tw-slate-900)', border: 'none', borderRadius: '12px', color: 'white' }}
-                    itemStyle={{ color: '#10b981' }}
+                <Suspense fallback={<ChartBarsSkeleton />}>
+                  <ReportTrendChart
+                    width={chartSize.width}
+                    height={chartSize.height}
+                    data={questionScoreData}
                   />
-                  <Area type="monotone"
-                    dataKey="score"
-                    stroke="#22c55e"
-                    fill="#bbf7d0"
-                    fillOpacity={0.4}
-                    strokeWidth={3} />
-                </AreaChart>
+                </Suspense>
               ) : (
                 <ChartBarsSkeleton />
               )}
