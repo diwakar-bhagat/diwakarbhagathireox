@@ -19,6 +19,7 @@ import { setResumeParsing } from '../redux/uiSlice';
 import { setResumeData, setJdData, clearWizardData } from '../redux/wizardSlice';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../utils/firebase';
+import DebugPanel from './DebugPanel';
 
 function Step1SetUp({ onStart }) {
     const { userData } = useSelector((state) => state.user);
@@ -40,6 +41,23 @@ function Step1SetUp({ onStart }) {
     const [analyzingJd, setAnalyzingJd] = useState(false);
 
     const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [lastApiStatus, setLastApiStatus] = useState("idle");
+    const debugEnabled = import.meta.env.VITE_DEBUG === "1"
+        || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1");
+
+    const yieldToBrowser = () => new Promise((resolve) => {
+        if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") {
+            resolve();
+            return;
+        }
+        window.requestAnimationFrame(() => resolve());
+    });
+
+    const resolveErrorMessage = (error, fallback) =>
+        error?.response?.data?.message
+        || error?.message
+        || fallback;
 
     useEffect(() => {
         return () => {
@@ -55,19 +73,26 @@ function Step1SetUp({ onStart }) {
             return;
         }
 
+        setErrorMessage("");
+        setLastApiStatus("resume:pending");
         setAnalyzingResume(true);
         dispatch(setResumeParsing(true));
+        await yieldToBrowser();
 
         const formdata = new FormData();
         formdata.append("resume", resumeFile);
 
         try {
             const result = await axios.post(ServerUrl + "/api/interview/resume", formdata, { withCredentials: true });
+            setLastApiStatus("resume:200");
             dispatch(setResumeData(result.data));
             setRole(result.data.role !== "unknown" ? result.data.role : "");
             setExperience(result.data.experience !== "unknown" ? result.data.experience : "");
             setResumeText(result.data.resumeText || "");
         } catch (error) {
+            const status = error?.response?.status || "error";
+            setLastApiStatus(`resume:${status}`);
+            setErrorMessage(resolveErrorMessage(error, "Failed to analyze resume"));
             console.log("Failed to analyze resume", error);
         } finally {
             setAnalyzingResume(false);
@@ -78,7 +103,10 @@ function Step1SetUp({ onStart }) {
     const handleAnalyzeJd = async () => {
         if ((!jdText && !jdFile) || analyzingJd) return;
 
+        setErrorMessage("");
+        setLastApiStatus("jd:pending");
         setAnalyzingJd(true);
+        await yieldToBrowser();
         const formdata = new FormData();
         if (jdFile) formdata.append("jdFile", jdFile);
         if (jdText) formdata.append("jdText", jdText);
@@ -100,8 +128,12 @@ function Step1SetUp({ onStart }) {
 
         try {
             const result = await axios.post(ServerUrl + "/api/interview/analyze-jd", formdata, { withCredentials: true });
+            setLastApiStatus("jd:200");
             dispatch(setJdData(result.data));
         } catch (error) {
+            const status = error?.response?.status || "error";
+            setLastApiStatus(`jd:${status}`);
+            setErrorMessage(resolveErrorMessage(error, "Failed to analyze JD"));
             console.log("Failed to analyze JD", error);
         } finally {
             setAnalyzingJd(false);
@@ -115,7 +147,10 @@ function Step1SetUp({ onStart }) {
         }
         if (!role || !resumeAnalysis) return;
 
+        setErrorMessage("");
+        setLastApiStatus("start:pending");
         setLoading(true);
+        await yieldToBrowser();
         try {
             const payload = {
                 role,
@@ -131,6 +166,7 @@ function Step1SetUp({ onStart }) {
             };
 
             const result = await axios.post(ServerUrl + "/api/interview/generate-questions", payload, { withCredentials: true });
+            setLastApiStatus("start:200");
 
             if (userData) {
                 dispatch(setUserData({ ...userData, credits: result.data.creditsLeft }));
@@ -138,10 +174,39 @@ function Step1SetUp({ onStart }) {
             setLoading(false);
             onStart(result.data);
         } catch (error) {
+            const status = error?.response?.status || "error";
+            setLastApiStatus(`start:${status}`);
+            setErrorMessage(resolveErrorMessage(error, "Failed to start interview"));
             console.error(error);
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (!debugEnabled) return;
+        console.log("[interview-setup-debug]", {
+            hasResume: Boolean(resumeAnalysis),
+            hasJd: Boolean(jdAnalysis),
+            role,
+            experience,
+            lastApiStatus,
+            startLoading: loading,
+            analyzingResume,
+            analyzingJd,
+            authReady: Boolean(userData || auth.currentUser),
+        });
+    }, [
+        analyzingJd,
+        analyzingResume,
+        debugEnabled,
+        experience,
+        jdAnalysis,
+        lastApiStatus,
+        loading,
+        resumeAnalysis,
+        role,
+        userData,
+    ]);
 
     const getCandidateSignals = () => {
         if (!resumeAnalysis) return [];
@@ -323,6 +388,29 @@ function Step1SetUp({ onStart }) {
                         <h2 className='text-3xl font-bold text-gray-800 dark:text-white'>Interview SetUp</h2>
                         {resumeAnalysis && <span className="text-sm font-medium text-emerald-600 flex items-center gap-1"><FaCheckCircle /> Resume Linked</span>}
                     </div>
+
+                    {errorMessage && (
+                        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            {errorMessage}
+                        </div>
+                    )}
+
+                    {debugEnabled && (
+                        <div className="mb-4">
+                            <DebugPanel
+                                title="Interview Debug"
+                                items={{
+                                    interviewId: "pending",
+                                    questionIndex: 0,
+                                    questionLength: 0,
+                                    lastApiStatus,
+                                    authStatus: userData || auth.currentUser ? "ready" : "missing",
+                                    startLoading: loading || analyzingResume || analyzingJd,
+                                    submitLoading: false,
+                                }}
+                            />
+                        </div>
+                    )}
 
                     <div className='space-y-6'>
                         {/* Resume Upload Block */}

@@ -14,36 +14,46 @@ import { useDispatch, useSelector } from 'react-redux'
 import { setAiThinking } from '../redux/uiSlice'
 import AIThinkingIndicator from './loaders/AIThinkingIndicator'
 import { IoSparkles } from "react-icons/io5";
+import { auth } from '../utils/firebase'
+import DebugPanel from './DebugPanel'
 
 function Step2Interview({ interviewData, onFinish }) {
   const dispatch = useDispatch()
   const aiThinking = useSelector((state) => state.ui.aiThinking)
+  const userData = useSelector((state) => state.user.userData)
   const { interviewId, questions, userName } = interviewData;
   const [isIntroPhase, setIsIntroPhase] = useState(true);
 
   const [isMicOn, setIsMicOn] = useState(true);
+  const [micSupported, setMicSupported] = useState(true);
   const recognitionRef = useRef(null);
   const [isAIPlaying, setIsAIPlaying] = useState(false);
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [dynamicQuestions, setDynamicQuestions] = useState(questions);
+  const [dynamicQuestions, setDynamicQuestions] = useState(Array.isArray(questions) ? questions : []);
   const [agentMeta, setAgentMeta] = useState(null);
   const SHOW_AGENT_CHIPS = true;
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState("");
   const [timeLeft, setTimeLeft] = useState(
-    questions[0]?.timeLimit || 60
+    questions?.[0]?.timeLimit || 60
   );
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voiceGender, setVoiceGender] = useState("female");
   const [subtitle, setSubtitle] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [lastApiStatus, setLastApiStatus] = useState("idle");
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
+  const debugEnabled = import.meta.env.VITE_DEBUG === "1"
+    || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1");
 
 
   const videoRef = useRef(null);
 
   const currentQuestion = dynamicQuestions[currentIndex];
   const currentQuestionRef = useRef(currentQuestion);
+  const announcedQuestionIndexRef = useRef(-1);
   const isMicOnRef = useRef(isMicOn);
   const isIntroPhaseRef = useRef(isIntroPhase);
   const isSubmittingRef = useRef(isSubmitting);
@@ -60,11 +70,25 @@ function Step2Interview({ interviewData, onFinish }) {
   isSubmittingRef.current = isSubmitting;
   feedbackRef.current = feedback;
   userNameRef.current = userName;
-  questionsLengthRef.current = questions.length;
+  questionsLengthRef.current = dynamicQuestions.length;
+
+  const yieldToBrowser = () => new Promise((resolve) => {
+    if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") {
+      resolve();
+      return;
+    }
+    window.requestAnimationFrame(() => resolve());
+  });
+
+  const resolveErrorMessage = (error, fallback) =>
+    error?.response?.data?.message
+    || error?.message
+    || fallback;
 
 
   useEffect(() => {
     const loadVoices = () => {
+      if (!window.speechSynthesis) return;
       const voices = window.speechSynthesis.getVoices();
       if (!voices.length) return;
 
@@ -104,6 +128,11 @@ function Step2Interview({ interviewData, onFinish }) {
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
 
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
   }, [])
 
   const videoSource = voiceGender === "male" ? maleVideo : femaleVideo;
@@ -136,7 +165,12 @@ function Step2Interview({ interviewData, onFinish }) {
       utterance.onstart = () => {
         setIsAIPlaying(true);
         stopMic()
-        videoRef.current?.play();
+        const playAttempt = videoRef.current?.play();
+        if (playAttempt?.catch) {
+          playAttempt.catch(() => {
+            setVideoUnavailable(true);
+          });
+        }
       };
 
 
@@ -166,9 +200,6 @@ function Step2Interview({ interviewData, onFinish }) {
 
 
   useEffect(() => {
-    if (!selectedVoice) {
-      return;
-    }
     const runIntro = async () => {
       if (isIntroPhase) {
         await speakTextRef.current?.(
@@ -181,6 +212,10 @@ function Step2Interview({ interviewData, onFinish }) {
 
         setIsIntroPhase(false)
       } else if (currentQuestionRef.current) {
+        if (announcedQuestionIndexRef.current === currentIndex) {
+          return;
+        }
+        announcedQuestionIndexRef.current = currentIndex;
         await new Promise(r => setTimeout(r, 800));
 
         // If last question (hard level)
@@ -232,9 +267,14 @@ function Step2Interview({ interviewData, onFinish }) {
 
 
   useEffect(() => {
-    if (!("webkitSpeechRecognition" in window)) return;
+    const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionApi) {
+      setMicSupported(false);
+      setIsMicOn(false);
+      return;
+    }
 
-    const recognition = new window.webkitSpeechRecognition();
+    const recognition = new SpeechRecognitionApi();
     recognition.lang = "en-US";
     recognition.continuous = true;
     recognition.interimResults = false;
@@ -246,17 +286,31 @@ function Step2Interview({ interviewData, onFinish }) {
       setAnswer((prev) => prev + " " + transcript);
     };
 
+    recognition.onerror = () => {
+      setMicSupported(false);
+      setIsMicOn(false);
+      setErrorMessage("Microphone input is unavailable on this device. Continue by typing your answer.");
+    };
+
     recognitionRef.current = recognition;
 
   }, []);
 
 
   const startMic = () => {
+    if (!micSupported) {
+      return;
+    }
     if (recognitionRef.current && !isAIPlaying) {
       try {
         recognitionRef.current.start();
       } catch (error) {
-        console.log(error);
+        if (error?.name !== "InvalidStateError") {
+          setMicSupported(false);
+          setIsMicOn(false);
+          setErrorMessage("Microphone input is unavailable on this device. Continue by typing your answer.");
+          console.log(error);
+        }
       }
     }
   };
@@ -268,6 +322,10 @@ function Step2Interview({ interviewData, onFinish }) {
     }
   };
   const toggleMic = () => {
+    if (!micSupported) {
+      setErrorMessage("Microphone input is unavailable on this device. Continue by typing your answer.");
+      return;
+    }
     if (isMicOn) {
       stopMic();
     } else {
@@ -279,9 +337,15 @@ function Step2Interview({ interviewData, onFinish }) {
 
   const submitAnswer = async () => {
     if (isSubmitting) return;
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     stopMic()
+    setErrorMessage("")
+    setLastApiStatus("submit:pending")
     setIsSubmitting(true)
     dispatch(setAiThinking(true))
+    await yieldToBrowser();
 
     try {
       const result = await axios.post(ServerUrl + "/api/interview/submit-answer", {
@@ -289,8 +353,9 @@ function Step2Interview({ interviewData, onFinish }) {
         questionIndex: currentIndex,
         answer,
         timeTaken:
-          currentQuestion.timeLimit - timeLeft,
+          (currentQuestion?.timeLimit || 0) - timeLeft,
       }, { withCredentials: true })
+      setLastApiStatus("submit:200")
 
       if (result.data.nextQuestion && currentIndex + 1 < dynamicQuestions.length) {
         setDynamicQuestions(prev => {
@@ -311,6 +376,9 @@ function Step2Interview({ interviewData, onFinish }) {
       setFeedback(result.data.feedback)
       speakText(result.data.feedback)
     } catch (error) {
+      const status = error?.response?.status || "error";
+      setLastApiStatus(`submit:${status}`)
+      setErrorMessage(resolveErrorMessage(error, "Failed to submit answer"));
       console.log(error)
     } finally {
       setIsSubmitting(false)
@@ -320,6 +388,8 @@ function Step2Interview({ interviewData, onFinish }) {
   submitAnswerRef.current = submitAnswer;
 
   const handleNext = async () => {
+    setErrorMessage("");
+    setLastApiStatus("next:local");
     setAnswer("");
     setFeedback("");
 
@@ -330,7 +400,7 @@ function Step2Interview({ interviewData, onFinish }) {
 
     await speakText("Alright, let's move to the next question.");
 
-    setCurrentIndex(currentIndex + 1);
+    setCurrentIndex((prev) => prev + 1);
     setTimeout(() => {
       if (isMicOn) startMic();
     }, 500);
@@ -341,13 +411,19 @@ function Step2Interview({ interviewData, onFinish }) {
   const finishInterview = async () => {
     stopMic()
     setIsMicOn(false)
+    setErrorMessage("")
+    setLastApiStatus("finish:pending")
     dispatch(setAiThinking(false))
     try {
       const result = await axios.post(ServerUrl + "/api/interview/finish", { interviewId }, { withCredentials: true })
+      setLastApiStatus("finish:200")
 
       console.log(result.data)
       onFinish(result.data)
     } catch (error) {
+      const status = error?.response?.status || "error";
+      setLastApiStatus(`finish:${status}`)
+      setErrorMessage(resolveErrorMessage(error, "Failed to finish interview"));
       console.log(error)
     }
   }
@@ -374,6 +450,32 @@ function Step2Interview({ interviewData, onFinish }) {
     };
   }, [dispatch]);
 
+  useEffect(() => {
+    if (!debugEnabled) return;
+    console.log("[interview-step-debug]", {
+      interviewId,
+      currentIndex,
+      questionLength: dynamicQuestions.length,
+      lastApiStatus,
+      authReady: Boolean(userData || auth.currentUser),
+      isSubmitting,
+      isIntroPhase,
+      micSupported,
+      isMicOn,
+    });
+  }, [
+    currentIndex,
+    debugEnabled,
+    dynamicQuestions.length,
+    interviewId,
+    isIntroPhase,
+    isMicOn,
+    isSubmitting,
+    lastApiStatus,
+    micSupported,
+    userData,
+  ]);
+
 
 
 
@@ -387,15 +489,22 @@ function Step2Interview({ interviewData, onFinish }) {
         {/* video section */}
         <div className='w-full lg:w-[35%] bg-white dark:bg-slate-900 flex flex-col items-center p-6 space-y-6 border-r border-gray-200 dark:border-slate-800'>
           <div className='w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-transparent dark:border-slate-700'>
-            <video
-              src={videoSource}
-              key={videoSource}
-              ref={videoRef}
-              muted
-              playsInline
-              preload="auto"
-              className="w-full h-auto object-cover"
-            />
+            {videoUnavailable ? (
+              <div className="flex aspect-video items-center justify-center bg-linear-to-br from-emerald-100 to-teal-100 px-6 text-center text-sm font-medium text-emerald-800 dark:from-slate-800 dark:to-slate-700 dark:text-emerald-300">
+                AI interviewer is ready. Continue with text and audio prompts.
+              </div>
+            ) : (
+              <video
+                src={videoSource}
+                key={videoSource}
+                ref={videoRef}
+                muted
+                playsInline
+                preload="metadata"
+                onError={() => setVideoUnavailable(true)}
+                className="w-full h-auto object-cover"
+              />
+            )}
           </div>
 
           {/* subtitle */}
@@ -448,6 +557,29 @@ function Step2Interview({ interviewData, onFinish }) {
           <h2 className='text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-6'>
             AI Smart Interview
           </h2>
+
+          {errorMessage && (
+            <div className='mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>
+              {errorMessage}
+            </div>
+          )}
+
+          {debugEnabled && (
+            <div className='mb-4'>
+              <DebugPanel
+                title="Interview Debug"
+                items={{
+                  interviewId,
+                  questionIndex: currentIndex + 1,
+                  questionLength: dynamicQuestions.length,
+                  lastApiStatus,
+                  authStatus: userData || auth.currentUser ? "ready" : "missing",
+                  startLoading: false,
+                  submitLoading: isSubmitting,
+                }}
+              />
+            </div>
+          )}
 
 
           {!isIntroPhase && (<div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>
@@ -503,8 +635,9 @@ function Step2Interview({ interviewData, onFinish }) {
             <div className='flex items-center gap-4'>
               <Motion.button
                 onClick={toggleMic}
+                disabled={!micSupported}
                 whileTap={{ scale: 0.9 }}
-                className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black dark:bg-emerald-600 text-white shadow-lg'>
+                className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black dark:bg-emerald-600 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed'>
                 {isMicOn ? <FaMicrophone size={20} /> : <FaMicrophoneSlash size={20} />}
               </Motion.button>
 

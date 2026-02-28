@@ -18,6 +18,12 @@ const clampScore = (value) => {
   return parsed;
 };
 
+const roundToSingleDecimal = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Number(parsed.toFixed(1));
+};
+
 const normalizeBuzzwordDensity = (value) => {
   if (value === "low" || value === "medium" || value === "high") return value;
   return "medium";
@@ -1030,23 +1036,28 @@ export const finishInterview = async (req, res) => {
       ? totalCorrectness / totalQuestions
       : 0;
 
-    interview.finalScore = finalScore;
+    const roundedFinalScore = roundToSingleDecimal(finalScore);
+    const roundedConfidence = roundToSingleDecimal(avgConfidence);
+    const roundedCommunication = roundToSingleDecimal(avgCommunication);
+    const roundedCorrectness = roundToSingleDecimal(avgCorrectness);
+
+    interview.finalScore = roundedFinalScore;
     interview.status = "completed";
 
     await interview.save();
 
     return res.status(200).json({
-      finalScore: Number(finalScore.toFixed(1)),
-      confidence: Number(avgConfidence.toFixed(1)),
-      communication: Number(avgCommunication.toFixed(1)),
-      correctness: Number(avgCorrectness.toFixed(1)),
+      finalScore: roundedFinalScore,
+      confidence: roundedConfidence,
+      communication: roundedCommunication,
+      correctness: roundedCorrectness,
       questionWiseScore: interview.questions.map((q) => ({
         question: q.question,
-        score: q.score || 0,
+        score: roundToSingleDecimal(q.score || 0),
         feedback: q.feedback || "",
-        confidence: q.confidence || 0,
-        communication: q.communication || 0,
-        correctness: q.correctness || 0,
+        confidence: roundToSingleDecimal(q.confidence || 0),
+        communication: roundToSingleDecimal(q.communication || 0),
+        correctness: roundToSingleDecimal(q.correctness || 0),
       })),
     })
   } catch (error) {
@@ -1111,11 +1122,17 @@ export const getInterviewReport = async (req, res) => {
       : 0;
 
     return res.json({
-      finalScore: interview.finalScore,
-      confidence: Number(avgConfidence.toFixed(1)),
-      communication: Number(avgCommunication.toFixed(1)),
-      correctness: Number(avgCorrectness.toFixed(1)),
-      questionWiseScore: interview.questions
+      finalScore: roundToSingleDecimal(interview.finalScore),
+      confidence: roundToSingleDecimal(avgConfidence),
+      communication: roundToSingleDecimal(avgCommunication),
+      correctness: roundToSingleDecimal(avgCorrectness),
+      questionWiseScore: interview.questions.map((q) => ({
+        ...q.toObject(),
+        score: roundToSingleDecimal(q.score || 0),
+        confidence: roundToSingleDecimal(q.confidence || 0),
+        communication: roundToSingleDecimal(q.communication || 0),
+        correctness: roundToSingleDecimal(q.correctness || 0),
+      }))
     });
 
   } catch (error) {

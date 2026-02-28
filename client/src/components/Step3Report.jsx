@@ -50,24 +50,42 @@ function Step3Report({ report }) {
     questionWiseScore = [],
   } = report;
 
-  const questionScoreData = questionWiseScore.map((score, index) => ({
+  const formatScore = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return "0.0";
+    return numeric.toFixed(1);
+  };
+
+  const normalizedFinalScore = Number(formatScore(finalScore));
+  const normalizedConfidence = Number(formatScore(confidence));
+  const normalizedCommunication = Number(formatScore(communication));
+  const normalizedCorrectness = Number(formatScore(correctness));
+  const normalizedQuestionWiseScore = questionWiseScore.map((item) => ({
+    ...item,
+    score: Number(formatScore(item?.score || 0)),
+    confidence: Number(formatScore(item?.confidence || 0)),
+    communication: Number(formatScore(item?.communication || 0)),
+    correctness: Number(formatScore(item?.correctness || 0)),
+  }));
+
+  const questionScoreData = normalizedQuestionWiseScore.map((score, index) => ({
     name: `Q${index + 1}`,
     score: score.score || 0
   }))
 
   const skills = [
-    { label: "Confidence", value: confidence },
-    { label: "Communication", value: communication },
-    { label: "Correctness", value: correctness },
+    { label: "Confidence", value: normalizedConfidence },
+    { label: "Communication", value: normalizedCommunication },
+    { label: "Correctness", value: normalizedCorrectness },
   ];
 
   let performanceText = "";
   let shortTagline = "";
 
-  if (finalScore >= 8) {
+  if (normalizedFinalScore >= 8) {
     performanceText = "Ready for job opportunities.";
     shortTagline = "Excellent clarity and structured responses.";
-  } else if (finalScore >= 5) {
+  } else if (normalizedFinalScore >= 5) {
     performanceText = "Needs minor improvement before interviews.";
     shortTagline = "Good foundation, refine articulation.";
   } else {
@@ -75,7 +93,7 @@ function Step3Report({ report }) {
     shortTagline = "Work on clarity and confidence.";
   }
 
-  const score = finalScore;
+  const score = normalizedFinalScore;
   const percentage = (score / 10) * 100;
 
 
@@ -112,7 +130,7 @@ function Step3Report({ report }) {
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
     doc.text(
-      `Final Score: ${finalScore}/10`,
+      `Final Score: ${formatScore(normalizedFinalScore)}/10`,
       pageWidth / 2,
       currentY + 12,
       { align: "center" }
@@ -126,19 +144,19 @@ function Step3Report({ report }) {
 
     doc.setFontSize(12);
 
-    doc.text(`Confidence: ${confidence}`, margin + 10, currentY + 10);
-    doc.text(`Communication: ${communication}`, margin + 10, currentY + 18);
-    doc.text(`Correctness: ${correctness}`, margin + 10, currentY + 26);
+    doc.text(`Confidence: ${formatScore(normalizedConfidence)}`, margin + 10, currentY + 10);
+    doc.text(`Communication: ${formatScore(normalizedCommunication)}`, margin + 10, currentY + 18);
+    doc.text(`Correctness: ${formatScore(normalizedCorrectness)}`, margin + 10, currentY + 26);
 
     currentY += 45;
 
     // ================= ADVICE =================
     let advice = "";
 
-    if (finalScore >= 8) {
+    if (normalizedFinalScore >= 8) {
       advice =
         "Excellent performance. Maintain confidence and structure. Continue refining clarity and supporting answers with strong real-world examples.";
-    } else if (finalScore >= 5) {
+    } else if (normalizedFinalScore >= 5) {
       advice =
         "Good foundation shown. Improve clarity and structure. Practice delivering concise, confident answers with stronger supporting examples.";
     } else {
@@ -166,10 +184,10 @@ function Step3Report({ report }) {
       startY: currentY,
       margin: { left: margin, right: margin },
       head: [["#", "Question", "Score", "Feedback"]],
-      body: questionWiseScore.map((q, i) => [
+      body: normalizedQuestionWiseScore.map((q, i) => [
         `${i + 1}`,
         q.question,
-        `${q.score}/10`,
+        `${formatScore(q.score)}/10`,
         q.feedback,
       ]),
       styles: {
@@ -250,7 +268,7 @@ function Step3Report({ report }) {
             <div className='relative w-20 h-20 sm:w-25 sm:h-25 mx-auto'>
               <CircularProgressbar
                 value={percentage}
-                text={`${score}/10`}
+                text={`${formatScore(score)}/10`}
                 styles={buildStyles({
                   textSize: "18px",
                   pathColor: "#10b981",
@@ -355,7 +373,7 @@ function Step3Report({ report }) {
               Question Breakdown
             </h3>
             <div className='space-y-6'>
-              {questionWiseScore.map((q, i) => (
+              {normalizedQuestionWiseScore.map((q, i) => (
                 <div key={i} className='bg-gray-50 dark:bg-slate-800/40 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-slate-700/50'>
 
                   <div className='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4'>
@@ -371,7 +389,7 @@ function Step3Report({ report }) {
 
 
                     <div className='bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-3 py-1 rounded-full font-bold text-xs sm:text-sm w-fit shadow-sm'>
-                      {q.score ?? 0}/10
+                      {formatScore(q.score)}/10
                     </div>
                   </div>
 
