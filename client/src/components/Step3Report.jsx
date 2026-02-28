@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { motion as Motion } from "motion/react"
@@ -39,13 +39,6 @@ function Step3Report({ report }) {
     }
   }, [])
 
-  if (!report) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500 text-lg">Loading Report...</p>
-      </div>
-    );
-  }
   const {
     finalScore = 0,
     confidence = 0,
@@ -53,7 +46,7 @@ function Step3Report({ report }) {
     correctness = 0,
     questionWiseScore = [],
     reportPayload = null,
-  } = report;
+  } = report || {};
 
   const formatScore = (value) => {
     const numeric = Number(value);
@@ -65,62 +58,82 @@ function Step3Report({ report }) {
   const normalizedConfidence = Number(formatScore(confidence));
   const normalizedCommunication = Number(formatScore(communication));
   const normalizedCorrectness = Number(formatScore(correctness));
-  const normalizedQuestionWiseScore = questionWiseScore.map((item) => ({
+  const normalizedQuestionWiseScore = useMemo(() => questionWiseScore.map((item) => ({
     ...item,
     score: Number(formatScore(item?.score || 0)),
     confidence: Number(formatScore(item?.confidence || 0)),
     communication: Number(formatScore(item?.communication || 0)),
     correctness: Number(formatScore(item?.correctness || 0)),
-  }));
+  })), [questionWiseScore]);
   const extendedReportPayload = reportPayload && typeof reportPayload === "object"
     ? reportPayload
     : null;
   const overallMetrics = extendedReportPayload?.overall || null;
   const cognitiveMetrics = extendedReportPayload?.cognitive || null;
   const atsMetrics = extendedReportPayload?.ats || null;
-  const heatmapSkills = Array.isArray(extendedReportPayload?.heatmap?.skills)
-    ? extendedReportPayload.heatmap.skills
-    : [];
-  const blueprintDays = Array.isArray(extendedReportPayload?.blueprint?.days)
-    ? extendedReportPayload.blueprint.days
-    : [];
-  const blueprintFocus = Array.isArray(extendedReportPayload?.blueprint?.topFocus)
-    ? extendedReportPayload.blueprint.topFocus
-    : [];
-  const reportQuestions = Array.isArray(extendedReportPayload?.questions)
-    ? extendedReportPayload.questions
-    : [];
-  const cognitiveBreakdown = cognitiveMetrics
-    ? [
-      { label: "Structure", value: Number(formatScore(cognitiveMetrics.structure || 0)) },
-      { label: "Examples", value: Number(formatScore(cognitiveMetrics.examples || 0)) },
-      { label: "Depth", value: Number(formatScore(cognitiveMetrics.depth || 0)) },
-      { label: "Tradeoffs", value: Number(formatScore(cognitiveMetrics.tradeoffs || 0)) },
-      { label: "Clarity", value: Number(formatScore(cognitiveMetrics.clarity || 0)) },
-    ]
-    : [];
-  const topHeatmapSkills = heatmapSkills.slice(0, 6);
+  const heatmapSkills = useMemo(() => (
+    Array.isArray(extendedReportPayload?.heatmap?.skills)
+      ? extendedReportPayload.heatmap.skills
+      : []
+  ), [extendedReportPayload?.heatmap?.skills]);
+  const blueprintDays = useMemo(() => (
+    Array.isArray(extendedReportPayload?.blueprint?.days)
+      ? extendedReportPayload.blueprint.days
+      : []
+  ), [extendedReportPayload?.blueprint?.days]);
+  const blueprintFocus = useMemo(() => (
+    Array.isArray(extendedReportPayload?.blueprint?.topFocus)
+      ? extendedReportPayload.blueprint.topFocus
+      : []
+  ), [extendedReportPayload?.blueprint?.topFocus]);
+  const reportQuestions = useMemo(() => (
+    Array.isArray(extendedReportPayload?.questions)
+      ? extendedReportPayload.questions
+      : []
+  ), [extendedReportPayload?.questions]);
+  const cognitiveBreakdown = useMemo(() => (
+    cognitiveMetrics
+      ? [
+        { label: "Structure", value: Number(formatScore(cognitiveMetrics.structure || 0)) },
+        { label: "Examples", value: Number(formatScore(cognitiveMetrics.examples || 0)) },
+        { label: "Depth", value: Number(formatScore(cognitiveMetrics.depth || 0)) },
+        { label: "Tradeoffs", value: Number(formatScore(cognitiveMetrics.tradeoffs || 0)) },
+        { label: "Clarity", value: Number(formatScore(cognitiveMetrics.clarity || 0)) },
+      ]
+      : []
+  ), [cognitiveMetrics]);
+  const topHeatmapSkills = useMemo(() => heatmapSkills.slice(0, 6), [heatmapSkills]);
   const overallStrengths = Array.isArray(overallMetrics?.strengths)
     ? overallMetrics.strengths
     : [];
   const overallWeaknesses = Array.isArray(overallMetrics?.weaknesses)
     ? overallMetrics.weaknesses
     : [];
-  const unansweredQuestions = Array.isArray(extendedReportPayload?.unansweredQuestions)
-    ? extendedReportPayload.unansweredQuestions.filter(Boolean)
-    : [];
+  const unansweredQuestions = useMemo(() => (
+    Array.isArray(extendedReportPayload?.unansweredQuestions)
+      ? extendedReportPayload.unansweredQuestions.filter(Boolean)
+      : []
+  ), [extendedReportPayload?.unansweredQuestions]);
   const hasUnansweredRisk = unansweredQuestions.length > 0;
 
-  const questionScoreData = normalizedQuestionWiseScore.map((score, index) => ({
+  const questionScoreData = useMemo(() => normalizedQuestionWiseScore.map((score, index) => ({
     name: `Q${index + 1}`,
     score: score.score || 0
-  }))
+  })), [normalizedQuestionWiseScore]);
 
-  const skills = [
+  const skills = useMemo(() => [
     { label: "Confidence", value: normalizedConfidence },
     { label: "Communication", value: normalizedCommunication },
     { label: "Correctness", value: normalizedCorrectness },
-  ];
+  ], [normalizedConfidence, normalizedCommunication, normalizedCorrectness]);
+
+  if (!report) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500 text-lg">Loading Report...</p>
+      </div>
+    );
+  }
 
   let performanceText = "";
   let shortTagline = "";

@@ -7,6 +7,7 @@ import { FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
 import { useState } from 'react'
 import { useRef } from 'react'
 import { useEffect } from 'react'
+import { useCallback } from 'react'
 import axios from "axios"
 import { ServerUrl } from '../App'
 import { BsArrowRight } from 'react-icons/bs'
@@ -16,7 +17,6 @@ import AIThinkingIndicator from './loaders/AIThinkingIndicator'
 import { IoSparkles } from "react-icons/io5";
 import { auth } from '../utils/firebase'
 import DebugPanel from './DebugPanel'
-import { clearInterviewSessionMeta, storeInterviewSessionMeta } from '../utils/interviewSessionStorage';
 
 function Step2Interview({ interviewData, onFinish }) {
   const dispatch = useDispatch()
@@ -74,6 +74,9 @@ function Step2Interview({ interviewData, onFinish }) {
   const speakTextRef = useRef(null);
   const startMicRef = useRef(null);
   const submitAnswerRef = useRef(null);
+  const hasFinalizedRef = useRef(false);
+  const abandonSentRef = useRef(false);
+  const isFinishingRef = useRef(false);
 
   currentQuestionRef.current = currentQuestion;
   isMicOnRef.current = isMicOn;
@@ -95,6 +98,39 @@ function Step2Interview({ interviewData, onFinish }) {
     error?.response?.data?.message
     || error?.message
     || fallback;
+
+  const sendAbandonSignal = useCallback(({ source = "cleanup", preferBeacon = false } = {}) => {
+    if (!interviewId || hasFinalizedRef.current || isFinishingRef.current || abandonSentRef.current) {
+      return;
+    }
+
+    abandonSentRef.current = true;
+    const abandonUrl = `${ServerUrl}/api/interview/${interviewId}/abandon`;
+    const payload = JSON.stringify({ source });
+
+    if (preferBeacon && typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      try {
+        const beaconBody = new Blob([payload], { type: "application/json" });
+        if (navigator.sendBeacon(abandonUrl, beaconBody)) {
+          return;
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    if (typeof fetch === "function") {
+      fetch(abandonUrl, {
+        method: "POST",
+        credentials: "include",
+        keepalive: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: payload,
+      }).catch(() => {});
+    }
+  }, [interviewId]);
 
 
   useEffect(() => {
@@ -414,11 +450,6 @@ function Step2Interview({ interviewData, onFinish }) {
     await speakText("Alright, let's move to the next question.");
 
     setCurrentIndex((prev) => prev + 1);
-    setTimeout(() => {
-      if (isMicOn) startMic();
-    }, 500);
-
-
   }
 
   const finishInterview = async () => {
@@ -427,14 +458,14 @@ function Step2Interview({ interviewData, onFinish }) {
     setErrorMessage("")
     setLastApiStatus("finish:pending")
     dispatch(setAiThinking(false))
+    isFinishingRef.current = true
     try {
       const result = await axios.post(ServerUrl + "/api/interview/finish", { interviewId }, { withCredentials: true })
       setLastApiStatus("finish:200")
-
-      console.log(result.data)
-      clearInterviewSessionMeta()
+      hasFinalizedRef.current = true
       onFinish(result.data)
     } catch (error) {
+      isFinishingRef.current = false
       const status = error?.response?.status || "error";
       setLastApiStatus(`finish:${status}`)
       setErrorMessage(resolveErrorMessage(error, "Failed to finish interview"));
@@ -453,15 +484,31 @@ function Step2Interview({ interviewData, onFinish }) {
   }, [timeLeft]);
 
   useEffect(() => {
-    if (!interviewId) return;
-    storeInterviewSessionMeta({
-      interviewId,
-      currentIndex,
-    });
-  }, [currentIndex, interviewId]);
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const handleBeforeUnload = () => {
+      sendAbandonSignal({ source: "beforeunload", preferBeacon: true });
+    };
+
+    const handlePageHide = () => {
+      sendAbandonSignal({ source: "pagehide", preferBeacon: true });
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, [sendAbandonSignal]);
 
   useEffect(() => {
     return () => {
+      sendAbandonSignal({ source: "unmount" });
+
       if (recognitionRef.current) {
         recognitionRef.current.stop();
         recognitionRef.current.abort();
@@ -470,7 +517,7 @@ function Step2Interview({ interviewData, onFinish }) {
       window.speechSynthesis.cancel();
       dispatch(setAiThinking(false))
     };
-  }, [dispatch]);
+  }, [dispatch, sendAbandonSignal]);
 
   useEffect(() => {
     if (!debugEnabled) return;

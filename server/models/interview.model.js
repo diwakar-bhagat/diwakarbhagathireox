@@ -201,11 +201,16 @@ const interviewSchema = new mongoose.Schema({
       generatedAt: { type: String, default: "" },
     },
 
+    startedAt: { type: Date, default: null },
+    endedAt: { type: Date, default: null },
+    creditsCharged: { type: Number, default: 0 },
+    chargedAt: { type: Date, default: null },
+    lastActiveAt: { type: Date, default: null },
     finalScore: { type: Number, default: 0 },
 
     status: {
       type: String,
-      enum: ["Incompleted", "completed"],
+      enum: ["Incompleted", "in_progress", "completed", "abandoned"],
       default: "Incompleted",
     }
 },{timestamps:true})

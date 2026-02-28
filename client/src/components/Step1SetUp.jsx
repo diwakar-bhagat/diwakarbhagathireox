@@ -169,7 +169,9 @@ function Step1SetUp({ onStart }) {
             const result = await axios.post(ServerUrl + "/api/interview/generate-questions", payload, { withCredentials: true });
             setLastApiStatus("start:200");
 
-            if (userData) {
+            if (result.data?.user) {
+                dispatch(setUserData(result.data.user));
+            } else if (userData) {
                 dispatch(setUserData({ ...userData, credits: result.data.creditsLeft }));
             }
             setLoading(false);

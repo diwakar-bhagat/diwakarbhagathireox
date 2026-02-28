@@ -9,6 +9,17 @@ import Interview from "../models/interview.model.js";
 
 const isOwnedInterview = (interview, userId) =>
   String(interview.userId) === String(userId);
+const CREDIT_COST_PER_INTERVIEW = 50;
+const ACTIVE_INTERVIEW_STATUSES = ["Incompleted", "in_progress"];
+const ACTIVE_INTERVIEW_DEBOUNCE_MS = 15000;
+
+const isActiveInterviewStatus = (status) => ACTIVE_INTERVIEW_STATUSES.includes(status);
+
+const markInterviewAbandoned = (interview, endedAt = new Date()) => {
+  interview.status = "abandoned";
+  interview.endedAt = endedAt;
+  interview.lastActiveAt = endedAt;
+};
 
 const clampScore = (value) => {
   const parsed = Number(value);
@@ -1404,6 +1415,7 @@ export const generateQuestion = async (req, res) => {
       gapAnalysis,
       interviewPlan,
       atsMatch,
+      autoAbandonActive,
     } = req.body
 
     if (!req.userId) {
@@ -1426,9 +1438,36 @@ export const generateQuestion = async (req, res) => {
       });
     }
 
-    if (user.credits < 50) {
+    const existingActiveInterview = await Interview.findOne({
+      userId: user._id,
+      status: { $in: ACTIVE_INTERVIEW_STATUSES },
+    }).sort({ updatedAt: -1, createdAt: -1 });
+
+    if (existingActiveInterview) {
+      if (Boolean(autoAbandonActive)) {
+        markInterviewAbandoned(existingActiveInterview);
+        await existingActiveInterview.save();
+      } else {
+        const referenceTime = existingActiveInterview.lastActiveAt
+          || existingActiveInterview.updatedAt
+          || existingActiveInterview.createdAt;
+        const activeAgeMs = referenceTime instanceof Date
+          ? Date.now() - referenceTime.getTime()
+          : null;
+
+        return res.status(409).json({
+          message: activeAgeMs !== null && activeAgeMs <= ACTIVE_INTERVIEW_DEBOUNCE_MS
+            ? "Interview start already in progress. Resume it from History or abandon it first."
+            : "You already have an active interview. Resume it from History or abandon it first.",
+          interviewId: String(existingActiveInterview._id),
+          status: existingActiveInterview.status,
+        });
+      }
+    }
+
+    if (user.credits < CREDIT_COST_PER_INTERVIEW) {
       return res.status(400).json({
-        message: "Not enough credits. Minimum 50 required."
+        message: `Not enough credits. Minimum ${CREDIT_COST_PER_INTERVIEW} required.`
       });
     }
 
@@ -1514,6 +1553,30 @@ export const generateQuestion = async (req, res) => {
       });
     }
 
+    const lifecycleStartedAt = new Date();
+    const interview = await Interview.create({
+      userId: user._id,
+      role,
+      experience,
+      mode,
+      resumeText: safeResume,
+      resumeAnalysis: normalizedResumeAnalysis,
+      ...(normalizedJdAnalysis ? { jdAnalysis: normalizedJdAnalysis } : {}),
+      gapAnalysis: normalizedGapAnalysis,
+      atsMatch: normalizedAtsMatch,
+      interviewPlan: effectiveInterviewPlan,
+      sessionState: {
+        current_difficulty: effectiveInterviewPlan.startingDifficulty || effectiveInterviewPlan.start_difficulty || 2,
+        difficulty_level: effectiveInterviewPlan.startingDifficulty || effectiveInterviewPlan.start_difficulty || 2,
+        focus_areas: focusAreas,
+      },
+      status: "in_progress",
+      startedAt: lifecycleStartedAt,
+      lastActiveAt: lifecycleStartedAt,
+      creditsCharged: 0,
+      questions: [],
+    });
+
     const messages = [
 
       {
@@ -1556,6 +1619,7 @@ Make questions based on the candidate’s role, experience,interviewMode, projec
     const aiResponse = await askAi(messages)
 
     if (!aiResponse || !aiResponse.trim()) {
+      await Interview.findByIdAndDelete(interview._id);
 
       return res.status(500).json({
         message: "AI returned empty response."
@@ -1570,47 +1634,61 @@ Make questions based on the candidate’s role, experience,interviewMode, projec
       .slice(0, 5);
 
     if (questionsArray.length === 0) {
+      await Interview.findByIdAndDelete(interview._id);
 
       return res.status(500).json({
         message: "AI failed to generate questions."
       });
     }
+    interview.questions = questionsArray.map((q, index) => ({
+      question: q,
+      difficulty: ["easy", "easy", "medium", "medium", "hard"][index],
+      timeLimit: [60, 60, 90, 90, 120][index],
+      taggedSkills: focusAreas.length
+        ? [focusAreas[index % focusAreas.length]]
+        : missingSkills.length
+          ? [missingSkills[index % missingSkills.length]]
+          : [],
+    }));
 
-    user.credits -= 50;
-    await user.save();
+    let creditsWereCharged = false;
+    try {
+      if ((interview.creditsCharged || 0) <= 0) {
+        user.credits -= CREDIT_COST_PER_INTERVIEW;
+        await user.save();
+        interview.creditsCharged = CREDIT_COST_PER_INTERVIEW;
+        interview.chargedAt = lifecycleStartedAt;
+        creditsWereCharged = true;
+      }
 
-    const interview = await Interview.create({
-      userId: user._id,
-      role,
-      experience,
-      mode,
-      resumeText: safeResume,
-      resumeAnalysis: normalizedResumeAnalysis,
-      ...(normalizedJdAnalysis ? { jdAnalysis: normalizedJdAnalysis } : {}),
-      gapAnalysis: normalizedGapAnalysis,
-      atsMatch: normalizedAtsMatch,
-      interviewPlan: effectiveInterviewPlan,
-      sessionState: {
-        current_difficulty: effectiveInterviewPlan.startingDifficulty || effectiveInterviewPlan.start_difficulty || 2,
-        difficulty_level: effectiveInterviewPlan.startingDifficulty || effectiveInterviewPlan.start_difficulty || 2,
-        focus_areas: focusAreas,
-      },
-      questions: questionsArray.map((q, index) => ({
-        question: q,
-        difficulty: ["easy", "easy", "medium", "medium", "hard"][index],
-        timeLimit: [60, 60, 90, 90, 120][index],
-        taggedSkills: focusAreas.length
-          ? [focusAreas[index % focusAreas.length]]
-          : missingSkills.length
-            ? [missingSkills[index % missingSkills.length]]
-            : [],
-      }))
-    })
+      await interview.save();
+    } catch (persistError) {
+      if (creditsWereCharged) {
+        user.credits += CREDIT_COST_PER_INTERVIEW;
+        try {
+          await user.save();
+        } catch (revertError) {
+          console.error("failed to revert interview credit charge", revertError);
+        }
+      }
+      if (interview?._id) {
+        await Interview.findByIdAndDelete(interview._id).catch((cleanupError) => {
+          console.error("failed to clean up interview after charge error", cleanupError);
+        });
+      }
+      throw persistError;
+    }
 
     res.json({
       interviewId: interview._id,
       creditsLeft: user.credits,
       userName: user.name,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        credits: user.credits,
+      },
       questions: interview.questions,
       atsMatch: interview.atsMatch,
       gapAnalysis: interview.gapAnalysis,
@@ -1647,6 +1725,12 @@ export const submitAnswer = async (req, res) => {
     if (!isOwnedInterview(interview, req.userId)) {
       return res.status(403).json({ message: "Forbidden" });
     }
+    if (interview.status === "completed") {
+      return res.status(400).json({ message: "Interview already completed" });
+    }
+    if (interview.status === "abandoned") {
+      return res.status(409).json({ message: "Interview was abandoned. Resume it from History before submitting." });
+    }
     if (questionIndex >= interview.questions.length) {
       return res.status(400).json({ message: "Invalid question index" });
     }
@@ -1654,6 +1738,8 @@ export const submitAnswer = async (req, res) => {
     const question = interview.questions[questionIndex]
     const safeAnswer = typeof answer === "string" ? answer.trim() : "";
     const sessionState = normalizeSessionState(interview.sessionState, interview.questions);
+    interview.status = "in_progress";
+    interview.lastActiveAt = new Date();
 
     // If no answer
     if (!safeAnswer) {
@@ -1892,6 +1978,8 @@ export const finishInterview = async (req, res) => {
     interview.skillHeatmap = heatmap;
     interview.improvementBlueprint = blueprint;
     interview.status = "completed";
+    interview.endedAt = new Date();
+    interview.lastActiveAt = interview.endedAt;
 
     await interview.save();
 
@@ -1951,6 +2039,12 @@ export const getInterviewSession = async (req, res) => {
     }
 
     const user = await User.findById(req.userId).select("name");
+    if (interview.status === "abandoned" || interview.status === "Incompleted") {
+      interview.status = "in_progress";
+    }
+    interview.lastActiveAt = new Date();
+    await interview.save();
+
     const firstUnansweredIndex = interview.questions.findIndex(
       (question) => typeof question.answer !== "string" || !question.answer.trim()
     );
@@ -1971,6 +2065,42 @@ export const getInterviewSession = async (req, res) => {
   } catch (error) {
     console.error("failed to recover interview session", error);
     return res.status(500).json({ message: "Failed to recover interview session" });
+  }
+}
+
+export const abandonInterview = async (req, res) => {
+  try {
+    const interviewId = typeof req.params?.id === "string" ? req.params.id.trim() : "";
+    if (!interviewId) {
+      return res.status(400).json({ message: "Interview id is required" });
+    }
+
+    const interview = await Interview.findById(interviewId);
+    if (!interview) {
+      return res.status(404).json({ message: "Interview not found" });
+    }
+
+    if (!isOwnedInterview(interview, req.userId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    if (interview.status === "completed" || interview.status === "abandoned") {
+      return res.status(200).json({
+        interviewId: String(interview._id),
+        status: interview.status,
+      });
+    }
+
+    markInterviewAbandoned(interview);
+    await interview.save();
+
+    return res.status(200).json({
+      interviewId: String(interview._id),
+      status: interview.status,
+    });
+  } catch (error) {
+    console.error("failed to abandon interview", error);
+    return res.status(500).json({ message: "Failed to abandon interview" });
   }
 }
 

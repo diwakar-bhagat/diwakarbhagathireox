@@ -1,13 +1,8 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react'
 import axios from "axios";
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ServerUrl } from '../App';
-import {
-  clearInterviewSessionMeta,
-  getStoredInterviewSessionMeta,
-  storeInterviewSessionMeta,
-} from '../utils/interviewSessionStorage';
 
 const Step1SetUp = lazy(() => import('../components/Step1SetUp'))
 const Step2Interview = lazy(() => import('../components/Step2Interview'))
@@ -15,10 +10,14 @@ const Step3Report = lazy(() => import('../components/Step3Report'))
 
 function InterviewPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const appBooting = useSelector((state) => state.ui.appBooting);
+    const resumeInterviewId = typeof location.state?.resumeInterviewId === "string"
+      ? location.state.resumeInterviewId.trim()
+      : "";
     const [step,setStep] = useState(1)
     const [interviewData,setInterviewData] = useState(null)
-    const [isRecovering, setIsRecovering] = useState(true);
+    const [isRecovering, setIsRecovering] = useState(Boolean(resumeInterviewId));
     const [recoveryError, setRecoveryError] = useState("");
 
     const stepFallback = (
@@ -34,19 +33,19 @@ function InterviewPage() {
         return undefined;
       }
 
+      if (!resumeInterviewId) {
+        setIsRecovering(false);
+        return undefined;
+      }
+
       let isDisposed = false;
 
       const recoverInterview = async () => {
-        const { interviewId, currentIndex } = getStoredInterviewSessionMeta();
-        if (!interviewId) {
-          if (!isDisposed) {
-            setIsRecovering(false);
-          }
-          return;
-        }
+        setIsRecovering(true);
+        setRecoveryError("");
 
         try {
-          const result = await axios.get(`${ServerUrl}/api/interview/session/${interviewId}`, {
+          const result = await axios.get(`${ServerUrl}/api/interview/session/${resumeInterviewId}`, {
             withCredentials: true,
           });
 
@@ -55,31 +54,21 @@ function InterviewPage() {
           }
 
           if (result.data?.status === "completed") {
-            clearInterviewSessionMeta();
-            navigate(`/report/${interviewId}`, { replace: true });
+            navigate(`/report/${resumeInterviewId}`, { replace: true });
             return;
           }
 
-          setInterviewData({
-            ...result.data,
-            currentIndex,
-          });
+          setInterviewData(result.data);
           setStep(2);
-          setRecoveryError("");
         } catch (error) {
           if (isDisposed) {
             return;
           }
-
-          const status = error?.response?.status;
-          if (status === 404) {
-            clearInterviewSessionMeta();
-            setRecoveryError("Your last interview session is no longer available. You can start a new interview.");
-          } else if (status === 401 || status === 403) {
-            setRecoveryError("Sign in again to resume your interview session.");
-          } else {
-            setRecoveryError(error?.response?.data?.message || error?.message || "Failed to recover your last interview.");
-          }
+          setRecoveryError(
+            error?.response?.data?.message
+            || error?.message
+            || "Failed to resume interview session."
+          );
         } finally {
           if (!isDisposed) {
             setIsRecovering(false);
@@ -92,15 +81,9 @@ function InterviewPage() {
       return () => {
         isDisposed = true;
       };
-    }, [appBooting, navigate]);
+    }, [appBooting, navigate, resumeInterviewId]);
 
     const handleStart = (data) => {
-      if (data?.interviewId) {
-        storeInterviewSessionMeta({
-          interviewId: data.interviewId,
-          currentIndex: 0,
-        });
-      }
       setInterviewData(data);
       setRecoveryError("");
       setStep(2);

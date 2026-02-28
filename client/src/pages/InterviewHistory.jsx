@@ -81,12 +81,23 @@ function InterviewHistory() {
                     :
 
                     <div className='grid gap-6'>
-                        {interviews.map((item, index) => (
+                        {interviews.map((item, index) => {
+                            const isCompleted = item.status === "completed";
+                            return (
                             <Motion.div key={index}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.35, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                                onClick={() => navigate(`/report/${item._id}`)}
+                                onClick={() => {
+                                    if (isCompleted) {
+                                        navigate(`/report/${item._id}`);
+                                        return;
+                                    }
+
+                                    navigate("/interview", {
+                                        state: { resumeInterviewId: item._id },
+                                    });
+                                }}
                                 className='bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-md dark:shadow-slate-950/40 hover:shadow-xl dark:hover:shadow-emerald-950/20 transition-all duration-300 cursor-pointer border border-gray-100 dark:border-slate-800'>
                                 <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
                                     <div>
@@ -117,12 +128,12 @@ function InterviewHistory() {
 
                                         {/* STATUS BADGE */}
                                         <span
-                                            className={`px-4 py-1 rounded-full text-xs font-medium ${item.status === "completed"
+                                            className={`px-4 py-1 rounded-full text-xs font-medium ${isCompleted
                                                 ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
                                                 : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"
                                                 }`}
                                         >
-                                            {item.status}
+                                            {isCompleted ? item.status : "resume available"}
                                         </span>
 
 
@@ -130,8 +141,8 @@ function InterviewHistory() {
                                 </div>
 
                             </Motion.div>
-
-                        ))
+                            );
+                        })
                         }
 
                     </div>
