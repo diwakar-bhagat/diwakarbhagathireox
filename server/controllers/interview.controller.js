@@ -1933,6 +1933,47 @@ export const getMyInterviews = async (req, res) => {
   }
 }
 
+export const getInterviewSession = async (req, res) => {
+  try {
+    const interviewId = typeof req.params?.id === "string" ? req.params.id.trim() : "";
+    if (!interviewId) {
+      return res.status(400).json({ message: "Interview id is required" });
+    }
+
+    const interview = await Interview.findById(interviewId);
+
+    if (!interview) {
+      return res.status(404).json({ message: "Interview not found" });
+    }
+
+    if (!isOwnedInterview(interview, req.userId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const user = await User.findById(req.userId).select("name");
+    const firstUnansweredIndex = interview.questions.findIndex(
+      (question) => typeof question.answer !== "string" || !question.answer.trim()
+    );
+    const currentIndex = firstUnansweredIndex >= 0
+      ? firstUnansweredIndex
+      : Math.max(0, interview.questions.length - 1);
+
+    return res.status(200).json({
+      interviewId: String(interview._id),
+      userName: user?.name || "",
+      questions: interview.questions,
+      currentIndex,
+      status: interview.status,
+      role: interview.role,
+      experience: interview.experience,
+      mode: interview.mode,
+    });
+  } catch (error) {
+    console.error("failed to recover interview session", error);
+    return res.status(500).json({ message: "Failed to recover interview session" });
+  }
+}
+
 export const getInterviewReport = async (req, res) => {
   try {
     const interviewId = typeof req.params?.id === "string" ? req.params.id.trim() : "";

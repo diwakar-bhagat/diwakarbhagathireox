@@ -18,10 +18,16 @@ function Step3Report({ report }) {
 
     const updateSize = () => {
       const { width, height } = element.getBoundingClientRect()
-      setChartSize({
-        width: Math.max(0, Math.floor(width)),
-        height: Math.max(0, Math.floor(height)),
-      })
+      const nextWidth = Math.max(0, Math.floor(width));
+      const nextHeight = Math.max(0, Math.floor(height));
+      setChartSize((prev) => (
+        prev.width === nextWidth && prev.height === nextHeight
+          ? prev
+          : {
+            width: nextWidth,
+            height: nextHeight,
+          }
+      ))
     }
 
     updateSize()

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 
-function ReportTrendChart({ width, height, data }) {
+const ReportTrendChart = memo(function ReportTrendChart({ width, height, data }) {
   return (
     <AreaChart width={width} height={height} data={data}>
       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:opacity-10" />
@@ -21,6 +21,6 @@ function ReportTrendChart({ width, height, data }) {
       />
     </AreaChart>
   );
-}
+});
 
 export default ReportTrendChart;

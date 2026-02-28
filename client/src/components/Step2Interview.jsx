@@ -16,12 +16,16 @@ import AIThinkingIndicator from './loaders/AIThinkingIndicator'
 import { IoSparkles } from "react-icons/io5";
 import { auth } from '../utils/firebase'
 import DebugPanel from './DebugPanel'
+import { clearInterviewSessionMeta, storeInterviewSessionMeta } from '../utils/interviewSessionStorage';
 
 function Step2Interview({ interviewData, onFinish }) {
   const dispatch = useDispatch()
   const aiThinking = useSelector((state) => state.ui.aiThinking)
   const userData = useSelector((state) => state.user.userData)
   const { interviewId, questions, userName } = interviewData;
+  const safeInitialQuestionIndex = Number.isInteger(interviewData?.currentIndex) && interviewData.currentIndex >= 0
+    ? interviewData.currentIndex
+    : 0;
   const [isIntroPhase, setIsIntroPhase] = useState(true);
 
   const [isMicOn, setIsMicOn] = useState(true);
@@ -29,14 +33,21 @@ function Step2Interview({ interviewData, onFinish }) {
   const recognitionRef = useRef(null);
   const [isAIPlaying, setIsAIPlaying] = useState(false);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return 0;
+    }
+    return Math.min(safeInitialQuestionIndex, questions.length - 1);
+  });
   const [dynamicQuestions, setDynamicQuestions] = useState(Array.isArray(questions) ? questions : []);
   const [agentMeta, setAgentMeta] = useState(null);
   const SHOW_AGENT_CHIPS = true;
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState("");
   const [timeLeft, setTimeLeft] = useState(
-    questions?.[0]?.timeLimit || 60
+    Array.isArray(questions) && questions.length > 0
+      ? questions[Math.min(safeInitialQuestionIndex, questions.length - 1)]?.timeLimit || 60
+      : 60
   );
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -421,6 +432,7 @@ function Step2Interview({ interviewData, onFinish }) {
       setLastApiStatus("finish:200")
 
       console.log(result.data)
+      clearInterviewSessionMeta()
       onFinish(result.data)
     } catch (error) {
       const status = error?.response?.status || "error";
@@ -439,6 +451,14 @@ function Step2Interview({ interviewData, onFinish }) {
       submitAnswerRef.current?.()
     }
   }, [timeLeft]);
+
+  useEffect(() => {
+    if (!interviewId) return;
+    storeInterviewSessionMeta({
+      interviewId,
+      currentIndex,
+    });
+  }, [currentIndex, interviewId]);
 
   useEffect(() => {
     return () => {
