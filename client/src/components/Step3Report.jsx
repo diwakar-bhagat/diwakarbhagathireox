@@ -77,6 +77,12 @@ function Step3Report({ report }) {
   const heatmapSkills = Array.isArray(extendedReportPayload?.heatmap?.skills)
     ? extendedReportPayload.heatmap.skills
     : [];
+  const blueprintDays = Array.isArray(extendedReportPayload?.blueprint?.days)
+    ? extendedReportPayload.blueprint.days
+    : [];
+  const blueprintFocus = Array.isArray(extendedReportPayload?.blueprint?.topFocus)
+    ? extendedReportPayload.blueprint.topFocus
+    : [];
   const reportQuestions = Array.isArray(extendedReportPayload?.questions)
     ? extendedReportPayload.questions
     : [];
@@ -90,6 +96,16 @@ function Step3Report({ report }) {
     ]
     : [];
   const topHeatmapSkills = heatmapSkills.slice(0, 6);
+  const overallStrengths = Array.isArray(overallMetrics?.strengths)
+    ? overallMetrics.strengths
+    : [];
+  const overallWeaknesses = Array.isArray(overallMetrics?.weaknesses)
+    ? overallMetrics.weaknesses
+    : [];
+  const unansweredQuestions = Array.isArray(extendedReportPayload?.unansweredQuestions)
+    ? extendedReportPayload.unansweredQuestions.filter(Boolean)
+    : [];
+  const hasUnansweredRisk = unansweredQuestions.length > 0;
 
   const questionScoreData = normalizedQuestionWiseScore.map((score, index) => ({
     name: `Q${index + 1}`,
@@ -362,6 +378,25 @@ function Step3Report({ report }) {
             <p className='text-gray-500 dark:text-gray-400 mt-2'>
               AI-powered performance insights
             </p>
+            {(overallMetrics || hasUnansweredRisk) && (
+              <div className='mt-3 flex flex-wrap gap-2'>
+                {overallMetrics && (
+                  <>
+                    <span className='text-[10px] sm:text-xs font-semibold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'>
+                      Role Fit {overallMetrics.roleFitPercent || 0}%
+                    </span>
+                    <span className='text-[10px] sm:text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'>
+                      Completion {overallMetrics.completionRatePercent || 0}%
+                    </span>
+                  </>
+                )}
+                {hasUnansweredRisk && (
+                  <span className='text-[10px] sm:text-xs font-semibold px-3 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'>
+                    Unanswered Risk: {unansweredQuestions.length}
+                  </span>
+                )}
+              </div>
+            )}
 
           </div>
         </div>
@@ -420,7 +455,59 @@ function Step3Report({ report }) {
                 </div>
               </div>
             )}
+
+            {hasUnansweredRisk && (
+              <div className="mt-4 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800/50 px-4 py-3 text-left">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                  Unanswered Question Risk
+                </p>
+                <p className="mt-1 text-sm text-rose-800 dark:text-rose-200 font-medium">
+                  {unansweredQuestions.length} question{unansweredQuestions.length > 1 ? "s" : ""} had no usable answer. This lowers readiness confidence.
+                </p>
+              </div>
+            )}
           </Motion.div>
+
+          {(overallStrengths.length > 0 || overallWeaknesses.length > 0) && (
+            <Motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-6 sm:p-8 transition-colors'>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-6">
+                Summary Signals
+              </h3>
+
+              <div className='space-y-5'>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Strengths</p>
+                  <div className='flex flex-wrap gap-2'>
+                    {overallStrengths.slice(0, 6).map((item, index) => (
+                      <span key={index} className='text-[10px] sm:text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-1 rounded-md border border-emerald-100 dark:border-emerald-800/50'>
+                        {item}
+                      </span>
+                    ))}
+                    {overallStrengths.length === 0 && (
+                      <span className='text-xs text-gray-500 dark:text-gray-400'>No consistent strengths confirmed yet.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Weaknesses</p>
+                  <div className='flex flex-wrap gap-2'>
+                    {overallWeaknesses.slice(0, 6).map((item, index) => (
+                      <span key={index} className='text-[10px] sm:text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-1 rounded-md border border-amber-100 dark:border-amber-800/50 capitalize'>
+                        {item.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                    {overallWeaknesses.length === 0 && (
+                      <span className='text-xs text-gray-500 dark:text-gray-400'>No major weakness tags flagged.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Motion.div>
+          )}
 
           <Motion.div
             initial={{ opacity: 0 }}
@@ -618,6 +705,73 @@ function Step3Report({ report }) {
             </Motion.div>
           )}
 
+          {blueprintDays.length > 0 && (
+            <Motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-5 sm:p-8 transition-colors'>
+              <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6'>
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200">
+                    7-Day Improvement Blueprint
+                  </h3>
+                  <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
+                    A daily plan generated from your weakest signals and JD gaps.
+                  </p>
+                </div>
+                {blueprintFocus.length > 0 && (
+                  <div className='flex flex-wrap gap-2'>
+                    {blueprintFocus.slice(0, 3).map((focus, index) => (
+                      <span key={index} className='text-[10px] sm:text-xs font-medium bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 px-2 py-1 rounded-md border border-sky-100 dark:border-sky-800/50'>
+                        {focus}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className='grid grid-cols-1 xl:grid-cols-2 gap-4'>
+                {blueprintDays.slice(0, 7).map((dayItem) => (
+                  <div key={dayItem.day} className='rounded-xl border border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/30 p-4'>
+                    <div className='flex items-start justify-between gap-3 mb-3'>
+                      <div>
+                        <p className='text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400'>Day {dayItem.day}</p>
+                        <p className='font-semibold text-gray-800 dark:text-gray-100 mt-1'>
+                          {dayItem.title || `Day ${dayItem.day}`}
+                        </p>
+                      </div>
+                      <span className='text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'>
+                        Action
+                      </span>
+                    </div>
+
+                    {Array.isArray(dayItem.tasks) && dayItem.tasks.length > 0 && (
+                      <ul className='space-y-2 text-sm text-gray-700 dark:text-gray-300'>
+                        {dayItem.tasks.slice(0, 3).map((task, taskIndex) => (
+                          <li key={taskIndex} className='flex items-start gap-2'>
+                            <span className='mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0'></span>
+                            <span>{task}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {dayItem.expectedOutcome && (
+                      <div className='mt-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 px-3 py-3'>
+                        <p className='text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1'>
+                          Expected Outcome
+                        </p>
+                        <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed'>
+                          {dayItem.expectedOutcome}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Motion.div>
+          )}
+
           <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -625,6 +779,18 @@ function Step3Report({ report }) {
             <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-6">
               Question Breakdown
             </h3>
+
+            {hasUnansweredRisk && (
+              <div className='mb-5 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800/50 px-4 py-3'>
+                <p className='text-xs font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300 mb-2'>
+                  Unanswered Questions
+                </p>
+                <p className='text-sm text-rose-800 dark:text-rose-200 leading-relaxed'>
+                  {unansweredQuestions.slice(0, 2).join(" | ")}
+                  {unansweredQuestions.length > 2 ? ` | +${unansweredQuestions.length - 2} more` : ""}
+                </p>
+              </div>
+            )}
             <div className='space-y-6'>
               {normalizedQuestionWiseScore.map((q, i) => (
                 <div key={i} className='bg-gray-50 dark:bg-slate-800/40 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-slate-700/50'>
