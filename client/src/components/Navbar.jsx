@@ -10,7 +10,36 @@ import { ServerUrl } from "../App";
 import { setUserData } from "../redux/userSlice";
 import ThemeToggle from "./ThemeToggle";
 
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../utils/firebase";
 const AuthModel = lazy(() => import("./AuthModel"));
+
+const useLiveStats = () => {
+  const [stats, setStats] = useState({ totalUsers: 0, activeUsers: 0, loading: true });
+
+  useEffect(() => {
+    // If stats are stored under a 'stats/app' document
+    const docRef = doc(db, "stats", "app");
+    const unsub = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setStats({
+          totalUsers: data.totalUsers || 0,
+          activeUsers: data.activeUsers || 0,
+          loading: false,
+        });
+      } else {
+        setStats(prev => ({ ...prev, loading: false }));
+      }
+    }, (error) => {
+      console.log("Error fetching stats:", error);
+      setStats(prev => ({ ...prev, loading: false }));
+    });
+    return () => unsub();
+  }, []);
+
+  return stats;
+};
 
 function Navbar() {
   const { userData } = useSelector((state) => state.user);
@@ -21,6 +50,7 @@ function Navbar() {
   const dispatch = useDispatch();
   const creditPanelRef = useRef(null);
   const userPanelRef = useRef(null);
+  const liveStats = useLiveStats();
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -80,6 +110,21 @@ function Navbar() {
             </button>
 
             <div className="relative flex items-center gap-2 sm:gap-3 lg:gap-4">
+              {/* LIVE STATS */}
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                <div className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </div>
+                {liveStats.loading ? (
+                  <div className="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                ) : (
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                    {liveStats.activeUsers} <span className="text-[10px] text-slate-400">online</span>
+                  </span>
+                )}
+              </div>
+
               <ThemeToggle />
 
               <div className="relative" ref={creditPanelRef}>

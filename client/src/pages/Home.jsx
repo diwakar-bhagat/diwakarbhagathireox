@@ -11,7 +11,7 @@ import {
 } from "react-icons/bs";
 import { HiSparkles } from "react-icons/hi";
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import hrImg from "../assets/HR.png";
 import techImg from "../assets/tech.png";
 import confidenceImg from "../assets/confi.png";
@@ -23,6 +23,60 @@ import analyticsImg from "../assets/history.png";
 import Footer from '../components/Footer';
 
 const AuthModel = lazy(() => import('../components/AuthModel'));
+
+const MorphingText = () => {
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setStage(1);
+    }, 2800); // Wait 2.8s before morphing
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <span className="relative inline-grid place-items-center ml-0 mt-3 md:mt-0 md:ml-4 overflow-hidden align-middle rounded-2xl sm:rounded-[2rem] bg-emerald-500/10 dark:bg-emerald-400/10 backdrop-blur-2xl border border-emerald-500/20 shadow-[0_8px_30px_rgba(16,185,129,0.15)] px-6 py-2 sm:px-8 sm:py-3">
+      {/* Stage 0: AI Intelligence */}
+      <Motion.span
+        initial={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+        animate={{
+          opacity: stage === 0 ? 1 : 0,
+          filter: stage === 0 ? "blur(0px)" : "blur(12px)",
+          y: stage === 0 ? 0 : -35
+        }}
+        transition={{ duration: 0.6, ease: "easeIn" }}
+        className="col-start-1 row-start-1 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-semibold"
+      >
+        AI Intelligence
+      </Motion.span>
+
+      {/* Stage 1: HireOX.AI */}
+      <Motion.span
+        initial={{ opacity: 0, filter: "blur(12px)", y: 35 }}
+        animate={{
+          opacity: stage === 1 ? 1 : 0,
+          filter: stage === 1 ? "blur(0px)" : "blur(12px)",
+          y: stage === 1 ? 0 : 35
+        }}
+        transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+        className="col-start-1 row-start-1 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold tracking-wide"
+        style={{ perspective: 1000 }}
+      >
+        HireO
+        <Motion.span
+          initial={{ rotateY: 0, scale: 1 }}
+          animate={stage === 1 ? { rotateY: 360, scale: [1, 1.25, 1] } : {}}
+          transition={{ duration: 1.2, delay: 0.6, type: "spring", bounce: 0.5 }}
+          className="inline-block text-emerald-500 dark:text-emerald-400 mx-[2px] font-extrabold"
+          style={{ transformStyle: "preserve-3d", transformOrigin: "center" }}
+        >
+          X
+        </Motion.span>
+        .AI
+      </Motion.span>
+    </span>
+  );
+};
 
 function Home() {
   const { userData } = useSelector((state) => state.user)
@@ -49,13 +103,8 @@ function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               className='text-4xl md:text-6xl font-semibold leading-tight max-w-4xl mx-auto'>
-              Practice Interviews with
-              <span className='relative inline-block'>
-                <span className='bg-green-100 text-green-600 px-5 py-1 rounded-full'>
-                  AI Intelligence
-
-                </span>
-              </span>
+              <span className='block md:inline'>Practice Interviews with</span>
+              <MorphingText />
 
 
 
@@ -310,7 +359,7 @@ function Home() {
         </Suspense>
       )}
 
-        <Footer/>
+      <Footer />
 
     </div>
   )

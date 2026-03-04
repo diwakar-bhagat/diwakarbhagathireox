@@ -171,7 +171,8 @@ function Step1SetUp({ onStart }) {
 
             if (result.data?.user) {
                 dispatch(setUserData(result.data.user));
-            } else if (userData) {
+            } else if (result.data?.creditsLeft !== undefined) {
+                // Guaranteed fallback update even if user payload misses
                 dispatch(setUserData({ ...userData, credits: result.data.creditsLeft }));
             }
             setLoading(false);
@@ -308,7 +309,7 @@ function Step1SetUp({ onStart }) {
                                                     ? "Weighted against must-haves, keyword coverage, and weak evidence areas."
                                                     : gapAnalysis
                                                         ? "Based on parsed required and preferred skills."
-                                                    : "Resume-based role alignment generated successfully."}
+                                                        : "Resume-based role alignment generated successfully."}
                                             </p>
                                         </div>
                                     </div>

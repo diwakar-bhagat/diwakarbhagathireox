@@ -18,7 +18,52 @@ import { IoSparkles } from "react-icons/io5";
 import { auth } from '../utils/firebase'
 import DebugPanel from './DebugPanel'
 
-function Step2Interview({ interviewData, onFinish }) {
+const AnswerInput = React.memo(React.forwardRef(({ disabled, value, onChange }, ref) => {
+  const [text, setText] = useState(value || "");
+  React.useImperativeHandle(ref, () => ({
+    getValue: () => text,
+    appendValue: (val) => setText(prev => prev + " " + val),
+    setValue: (val) => setText(val)
+  }));
+  return (
+    <textarea
+      disabled={disabled}
+      placeholder="Type your answer here..."
+      onChange={(e) => {
+        setText(e.target.value);
+        if (onChange) onChange(e.target.value);
+      }}
+      value={text}
+      style={{ touchAction: 'pan-y' }}
+      className="flex-1 bg-gray-100 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl resize-none outline-none border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-600 transition text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+    />
+  );
+}));
+
+const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTakenRef }) => {
+  const [timeLeft, setTimeLeft] = useState(totalTime || 60);
+  useEffect(() => {
+    setTimeLeft(totalTime || 60);
+    if (parentTimeTakenRef) parentTimeTakenRef.current = 0;
+  }, [totalTime, parentTimeTakenRef]);
+  useEffect(() => {
+    if (isIntroPhase) return;
+    if (timeLeft <= 0) {
+      if (onTimeUp) onTimeUp();
+      return;
+    }
+    const timerId = setInterval(() => {
+      setTimeLeft(prev => {
+        const next = prev - 1;
+        if (parentTimeTakenRef) parentTimeTakenRef.current = (totalTime || 60) - next;
+        if (next <= 0) clearInterval(timerId);
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, [isIntroPhase, timeLeft, totalTime, parentTimeTakenRef, onTimeUp]);
+  return <Timer timeLeft={timeLeft} totalTime={totalTime} />;
+}); function Step2Interview({ interviewData, onFinish }) {
   const dispatch = useDispatch()
   const aiThinking = useSelector((state) => state.ui.aiThinking)
   const userData = useSelector((state) => state.user.userData)
@@ -42,13 +87,10 @@ function Step2Interview({ interviewData, onFinish }) {
   const [dynamicQuestions, setDynamicQuestions] = useState(Array.isArray(questions) ? questions : []);
   const [agentMeta, setAgentMeta] = useState(null);
   const SHOW_AGENT_CHIPS = true;
-  const [answer, setAnswer] = useState("");
+  const answerInputRef = useRef(null);
+  const timeTakenRef = useRef(0);
   const [feedback, setFeedback] = useState("");
-  const [timeLeft, setTimeLeft] = useState(
-    Array.isArray(questions) && questions.length > 0
-      ? questions[Math.min(safeInitialQuestionIndex, questions.length - 1)]?.timeLimit || 60
-      : 60
-  );
+  // Timer state moved to LocalTimer to prevent heavy parent re-renders
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voiceGender, setVoiceGender] = useState("female");
@@ -99,8 +141,10 @@ function Step2Interview({ interviewData, onFinish }) {
     || error?.message
     || fallback;
 
-  const sendAbandonSignal = useCallback(({ source = "cleanup", preferBeacon = false } = {}) => {
-    if (!interviewId || hasFinalizedRef.current || isFinishingRef.current || abandonSentRef.current) {
+  const sendAbandonSignal = useCallback(async ({ source = "cleanup", preferBeacon = false } = {}) => {
+    // Only abandon if we haven't finalized and status is still in progress.
+    const isCompletedOrArchived = ["completed", "failed"].includes(interviewData?.status);
+    if (!interviewId || hasFinalizedRef.current || isFinishingRef.current || abandonSentRef.current || isCompletedOrArchived) {
       return;
     }
 
@@ -115,22 +159,24 @@ function Step2Interview({ interviewData, onFinish }) {
           return;
         }
       } catch (error) {
-        console.log(error);
+        console.log("Beacon Error:", error);
       }
     }
 
     if (typeof fetch === "function") {
-      fetch(abandonUrl, {
-        method: "POST",
-        credentials: "include",
-        keepalive: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: payload,
-      }).catch(() => {});
+      try {
+        await fetch(abandonUrl, {
+          method: "POST",
+          credentials: "include",
+          keepalive: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: payload,
+        });
+      } catch (e) { }
     }
-  }, [interviewId]);
+  }, [interviewId, interviewData?.status]);
 
 
   useEffect(() => {
@@ -286,31 +332,7 @@ function Step2Interview({ interviewData, onFinish }) {
 
 
 
-  useEffect(() => {
-    if (isIntroPhase) return;
-    if (!currentQuestionRef.current) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          return 0;
-        }
-        return prev - 1
-
-      })
-    }, 1000);
-
-    return () => clearInterval(timer)
-
-  }, [isIntroPhase, currentIndex])
-
-  useEffect(() => {
-    const activeQuestion = currentQuestionRef.current;
-    if (!isIntroPhaseRef.current && activeQuestion) {
-      setTimeLeft(activeQuestion.timeLimit || 60);
-    }
-  }, [currentIndex]);
+  // Timer logic moved to LocalTimer inner component to prevent Step2Interview re-renders
 
 
   useEffect(() => {
@@ -330,7 +352,7 @@ function Step2Interview({ interviewData, onFinish }) {
       const transcript =
         event.results[event.results.length - 1][0].transcript;
 
-      setAnswer((prev) => prev + " " + transcript);
+      answerInputRef.current?.appendValue(transcript);
     };
 
     recognition.onerror = () => {
@@ -398,9 +420,8 @@ function Step2Interview({ interviewData, onFinish }) {
       const result = await axios.post(ServerUrl + "/api/interview/submit-answer", {
         interviewId,
         questionIndex: currentIndex,
-        answer,
-        timeTaken:
-          (currentQuestion?.timeLimit || 0) - timeLeft,
+        answer: answerInputRef.current?.getValue() || "",
+        timeTaken: timeTakenRef.current || 0,
       }, { withCredentials: true })
       setLastApiStatus("submit:200")
 
@@ -439,7 +460,7 @@ function Step2Interview({ interviewData, onFinish }) {
   const handleNext = async () => {
     setErrorMessage("");
     setLastApiStatus("next:local");
-    setAnswer("");
+    answerInputRef.current?.setValue("");
     setFeedback("");
 
     if (currentIndex + 1 >= dynamicQuestions.length) {
@@ -474,14 +495,7 @@ function Step2Interview({ interviewData, onFinish }) {
   }
 
 
-  useEffect(() => {
-    if (isIntroPhaseRef.current) return;
-    if (!currentQuestionRef.current) return;
-
-    if (timeLeft === 0 && !isSubmittingRef.current && !feedbackRef.current) {
-      submitAnswerRef.current?.()
-    }
-  }, [timeLeft]);
+  // Auto-submit logic handled by LocalTimer onTimeUp
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -599,7 +613,11 @@ function Step2Interview({ interviewData, onFinish }) {
 
             <div className='flex justify-center'>
 
-              <Timer timeLeft={timeLeft} totalTime={currentQuestion?.timeLimit} />
+              <LocalTimer totalTime={currentQuestion?.timeLimit} onTimeUp={() => {
+                if (!isSubmittingRef.current && !feedbackRef.current) {
+                  submitAnswerRef.current?.();
+                }
+              }} isIntroPhase={isIntroPhase} parentTimeTakenRef={timeTakenRef} />
             </div>
 
             <div className="h-px bg-gray-200 dark:bg-slate-700"></div>
@@ -703,11 +721,10 @@ function Step2Interview({ interviewData, onFinish }) {
             )}
           </div>)
           }
-          <textarea
-            placeholder="Type your answer here..."
-            onChange={(e) => setAnswer(e.target.value)}
-            value={answer}
-            className="flex-1 bg-gray-100 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl resize-none outline-none border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-600 transition text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500" />
+          <AnswerInput
+            ref={answerInputRef}
+            disabled={isSubmitting || !!feedback}
+          />
 
 
           {!feedback ? (
