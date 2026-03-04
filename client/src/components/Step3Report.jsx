@@ -6,6 +6,9 @@ import ChartBarsSkeleton from './loaders/ChartBarsSkeleton';
 
 const ReportTrendChart = lazy(() => import('./ReportTrendChart'));
 const ReportScoreRing = lazy(() => import('./ReportScoreRing'));
+import OrbitSkillsRadar from './OrbitSkillsRadar';
+import SkillEvidenceHeatmap from './SkillEvidenceHeatmap';
+import DataTabs from './DataTabs';
 
 function Step3Report({ report }) {
   const navigate = useNavigate()
@@ -384,36 +387,42 @@ function Step3Report({ report }) {
   };
 
   return (
-    <div className='min-h-screen bg-linear-to-br from-gray-50 to-green-50 dark:from-slate-950 dark:to-slate-900 px-4 sm:px-6 lg:px-10 py-8 transition-colors duration-300'>
-      <div className='mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+    <div className='min-h-screen bg-base-navy px-4 sm:px-6 lg:px-10 py-8 transition-colors duration-300 relative overflow-hidden'>
+      {/* Circuit Grid Pulse Background */}
+      <div
+        className="absolute inset-0 z-0 pointer-events-none opacity-20 circuit-pulse"
+        style={{ backgroundImage: `url('/bgmain.svg')`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+      />
+
+      <div className='mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative z-10'>
         <div className='md:mb-10 w-full flex items-start gap-4 flex-wrap'>
           <button
             onClick={() => navigate("/history")}
-            className='mt-1 p-3 rounded-full bg-white dark:bg-slate-800 shadow hover:shadow-md dark:shadow-slate-950/40 transition'>
-            <FaArrowLeft className='text-gray-600 dark:text-gray-400' />
+            className='mt-1 p-3 rounded-full glass-card hover:bg-white/10 transition'>
+            <FaArrowLeft className='text-slate-300' />
           </button>
 
           <div>
-            <h1 className='text-3xl font-bold flex-nowrap text-gray-800 dark:text-white'>
+            <h1 className='text-3xl font-bold flex-nowrap text-slate-100'>
               Interview Analytics Dashboard
             </h1>
-            <p className='text-gray-500 dark:text-gray-400 mt-2'>
+            <p className='text-slate-400 mt-2'>
               AI-powered performance insights
             </p>
             {(overallMetrics || hasUnansweredRisk) && (
               <div className='mt-3 flex flex-wrap gap-2'>
                 {overallMetrics && (
                   <>
-                    <span className='text-[10px] sm:text-xs font-semibold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'>
+                    <span className='text-[10px] sm:text-xs font-semibold px-3 py-1 rounded-full bg-[#6D5BFF]/10 text-[#A78BFA] border border-[#6D5BFF]/30'>
                       Role Fit {overallMetrics.roleFitPercent || 0}%
                     </span>
-                    <span className='text-[10px] sm:text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'>
+                    <span className='text-[10px] sm:text-xs font-semibold px-3 py-1 rounded-full bg-white/5 text-slate-300 border border-white/10'>
                       Completion {overallMetrics.completionRatePercent || 0}%
                     </span>
                   </>
                 )}
                 {hasUnansweredRisk && (
-                  <span className='text-[10px] sm:text-xs font-semibold px-3 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'>
+                  <span className='text-[10px] sm:text-xs font-semibold px-3 py-1 rounded-full bg-rose-500/10 text-rose-300 border border-rose-500/30'>
                     Unanswered Risk: {unansweredQuestions.length}
                   </span>
                 )}
@@ -423,25 +432,25 @@ function Step3Report({ report }) {
           </div>
         </div>
 
-        <button onClick={downloadPDF} className='bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white px-6 py-3 rounded-xl shadow-md transition-all duration-300 font-semibold text-sm sm:text-base text-nowrap'>Download PDF</button>
+        <button onClick={downloadPDF} className='glass-card hover:bg-[#6D5BFF]/20 text-[#A78BFA] border-[#6D5BFF]/40 px-6 py-3 rounded-xl shadow-[0_0_20px_rgba(109,91,255,0.2)] transition-all duration-300 font-semibold text-sm sm:text-base text-nowrap'>Download PDF</button>
       </div>
 
 
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8'>
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 relative z-10'>
 
         <div className='space-y-6'>
           <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-6 sm:p-8 text-center transition-colors">
+            className="glass-card p-6 sm:p-8 text-center transition-colors">
 
-            <h3 className="text-gray-500 dark:text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
+            <h3 className="text-slate-400 mb-4 sm:mb-6 text-sm sm:text-base">
               Overall Performance
             </h3>
             <div className='relative w-20 h-20 sm:w-25 sm:h-25 mx-auto'>
               <Suspense
                 fallback={
-                  <div className="h-full w-full rounded-full border-8 border-gray-200 dark:border-slate-800 flex items-center justify-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                  <div className="h-full w-full rounded-full border-8 border-white/5 flex items-center justify-center text-sm font-semibold text-[#8B5CF6]">
                     {formatScore(score)}/10
                   </div>
                 }
@@ -570,27 +579,13 @@ function Step3Report({ report }) {
             <Motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-6 sm:p-8 transition-colors'>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-6">
-                Cognitive Breakdown
+              className='glass-card p-6 sm:p-8 transition-colors'>
+              <h3 className="text-base sm:text-lg font-semibold text-slate-100 mb-6">
+                Cognitive Radar
               </h3>
 
-              <div className='space-y-4'>
-                {cognitiveBreakdown.map((metric) => (
-                  <div key={metric.label}>
-                    <div className='flex justify-between mb-2 text-sm sm:text-base text-gray-600 dark:text-gray-300'>
-                      <span>{metric.label}</span>
-                      <span className='font-semibold text-sky-600 dark:text-sky-400'>{formatScore(metric.value)}</span>
-                    </div>
-
-                    <div className='bg-gray-200 dark:bg-slate-800 h-2 sm:h-3 rounded-full overflow-hidden'>
-                      <div
-                        className='bg-sky-500 dark:bg-sky-400 h-full rounded-full transition-all duration-500'
-                        style={{ width: `${metric.value * 10}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
+              <div className='w-full flex justify-center py-4'>
+                <OrbitSkillsRadar skills={cognitiveBreakdown} centerScore={formatScore(overallMetrics?.roleFitPercent || percentage)} />
               </div>
             </Motion.div>
           )}
@@ -656,8 +651,8 @@ function Step3Report({ report }) {
           <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-5 sm:p-8 transition-colors min-h-0'>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4 sm:mb-6">
+            className='glass-card p-5 sm:p-8 transition-colors min-h-0'>
+            <h3 className="text-base sm:text-lg font-semibold text-slate-100 mb-4 sm:mb-6">
               Performance Trend
             </h3>
 
@@ -682,40 +677,18 @@ function Step3Report({ report }) {
             <Motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className='bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-lg dark:shadow-slate-950/40 border border-transparent dark:border-slate-800 p-5 sm:p-8 transition-colors'>
+              className='glass-card p-5 sm:p-8 transition-colors'>
               <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6'>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200">
-                  Skill Heatmap
+                <h3 className="text-base sm:text-lg font-semibold text-slate-100">
+                  Skill Grid Intensity
                 </h3>
-                <span className='text-xs font-semibold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'>
+                <span className='text-xs font-semibold px-3 py-1 rounded-full bg-[#6D5BFF]/10 text-[#A78BFA] border border-[#6D5BFF]/30'>
                   Coverage {extendedReportPayload?.heatmap?.completionRatePercent || 0}%
                 </span>
               </div>
 
-              <div className='space-y-4'>
-                {topHeatmapSkills.map((item) => (
-                  <div key={item.skill} className='rounded-xl border border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/30 p-4'>
-                    <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
-                      <div>
-                        <p className='font-semibold text-gray-800 dark:text-gray-100'>{item.skill}</p>
-                        <div className='mt-2 flex flex-wrap gap-2'>
-                          <span className={`text-[10px] sm:text-xs font-medium px-2 py-1 rounded-md border ${item.jd_required ? "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50" : "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"}`}>
-                            {item.jd_required ? "JD Required" : "JD Optional"}
-                          </span>
-                          <span className={`text-[10px] sm:text-xs font-medium px-2 py-1 rounded-md border ${item.resume_claimed ? "bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800/50" : "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50"}`}>
-                            {item.resume_claimed ? "Resume Claimed" : "Not On Resume"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className='text-left sm:text-right'>
-                        <p className='text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400'>Demonstrated</p>
-                        <p className='font-semibold text-gray-800 dark:text-gray-100 capitalize'>{item.demonstrated}</p>
-                        <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>Gap: <span className='capitalize'>{item.gap}</span></p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className='w-full'>
+                <SkillEvidenceHeatmap skills={topHeatmapSkills} />
               </div>
             </Motion.div>
           )}

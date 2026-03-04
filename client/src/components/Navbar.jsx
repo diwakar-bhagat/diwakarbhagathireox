@@ -51,6 +51,34 @@ function Navbar() {
   const creditPanelRef = useRef(null);
   const userPanelRef = useRef(null);
   const liveStats = useLiveStats();
+  const [isNavVisible, setIsNavVisible] = useState(true);
+
+  useEffect(() => {
+    let timeoutId;
+
+    const handleActivity = () => {
+      setIsNavVisible(true);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsNavVisible(false);
+      }, 2500);
+    };
+
+    handleActivity();
+
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("scroll", handleActivity);
+    window.addEventListener("touchstart", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("scroll", handleActivity);
+      window.removeEventListener("touchstart", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+    };
+  }, []);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -87,14 +115,17 @@ function Navbar() {
 
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-[80] bg-[#f3f3f3]/70 dark:bg-slate-950/70 backdrop-blur-sm flex justify-center px-3 sm:px-4 pt-4 sm:pt-6">
+      <div
+        className={`fixed inset-x-0 top-0 z-[80] flex justify-center px-3 sm:px-4 pt-4 sm:pt-6 transition-opacity duration-300 ease-in-out ${isNavVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
+      >
         <Motion.div
           initial={{ opacity: 0, y: -32 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: "easeOut" }}
-          className="relative w-full max-w-6xl overflow-visible rounded-2xl sm:rounded-[24px] border border-white/45 dark:border-white/10 bg-white/75 dark:bg-slate-900/70 backdrop-blur-xl shadow-[0_12px_40px_rgba(15,23,42,0.08)] dark:shadow-[0_12px_40px_rgba(2,6,23,0.4)] px-3 sm:px-5 lg:px-8 py-3 sm:py-4"
+          className="relative w-full max-w-6xl overflow-visible glass-card rounded-2xl sm:rounded-[24px] px-3 sm:px-5 lg:px-8 py-3 sm:py-4"
         >
-          <div className="pointer-events-none absolute inset-0 rounded-2xl sm:rounded-[24px] bg-gradient-to-r from-sky-100/30 via-transparent to-indigo-100/30 dark:from-indigo-500/10 dark:to-sky-400/10" />
+          <div className="pointer-events-none absolute inset-0 rounded-2xl sm:rounded-[24px] bg-gradient-to-r from-purple-500/10 via-transparent to-[#6D5BFF]/10" />
 
           <div className="relative z-10 flex items-center justify-between gap-3 sm:gap-4">
             <button
@@ -113,8 +144,8 @@ function Navbar() {
               {/* LIVE STATS */}
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
                 <div className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#A78BFA] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#6D5BFF]"></span>
                 </div>
                 {liveStats.loading ? (
                   <div className="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
