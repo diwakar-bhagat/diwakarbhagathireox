@@ -3,7 +3,7 @@ import { FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { motion as Motion } from "motion/react"
 import ChartBarsSkeleton from './loaders/ChartBarsSkeleton';
-import bgMain from '../assets/bgmain.jpg';
+import bgMain from '../assets/bgmain.svg';
 
 const ReportTrendChart = lazy(() => import('./ReportTrendChart'));
 const ReportScoreRing = lazy(() => import('./ReportScoreRing'));
@@ -389,11 +389,11 @@ function Step3Report({ report }) {
 
   return (
     <div className='min-h-screen bg-base-navy px-4 sm:px-6 lg:px-10 py-8 transition-colors duration-300 relative overflow-hidden'>
-      {/* Premium Purple Noise Image Background */}
+      {/* Premium SVG Background (Absolute Img Element instead of CSS Background) */}
       <img
         src={bgMain}
         alt="Neon background"
-        className="fixed inset-0 w-full h-full object-cover object-top z-0 pointer-events-none"
+        className="absolute left-0 top-0 right-0 bottom-0 w-full h-full object-cover -z-10 opacity-90 pointer-events-none"
       />
 
       <div className='mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative z-10'>
