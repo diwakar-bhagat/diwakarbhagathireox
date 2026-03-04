@@ -3,6 +3,7 @@ import { FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { motion as Motion } from "motion/react"
 import ChartBarsSkeleton from './loaders/ChartBarsSkeleton';
+import bgMain from '../assets/bgmain.svg';
 
 const ReportTrendChart = lazy(() => import('./ReportTrendChart'));
 const ReportScoreRing = lazy(() => import('./ReportScoreRing'));
@@ -391,7 +392,7 @@ function Step3Report({ report }) {
       {/* Circuit Grid Pulse Background */}
       <div
         className="absolute inset-0 z-0 pointer-events-none opacity-20 circuit-pulse"
-        style={{ backgroundImage: `url('/bgmain.svg')`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        style={{ backgroundImage: `url(${bgMain})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
 
       <div className='mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative z-10'>
