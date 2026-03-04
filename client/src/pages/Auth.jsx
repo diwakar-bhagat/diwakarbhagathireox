@@ -11,6 +11,8 @@ import { setUserData } from '../redux/userSlice';
 import { ServerUrl } from '../App';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import logo from '../assets/image.png'
+
 function Auth({ isModel = false }) {
     const dispatch = useDispatch();
     const { userData } = useSelector((state) => state.user);
@@ -42,6 +44,7 @@ function Auth({ isModel = false }) {
                     idToken,
                     name: user.displayName || "",
                     email: user.email || "",
+                    photoURL: user.photoURL || "",
                 },
                 { withCredentials: true }
             );
@@ -85,16 +88,15 @@ function Auth({ isModel = false }) {
         bg-white shadow-2xl border border-gray-200
       `}>
                 <div className='flex items-center justify-center gap-3 mb-6'>
-                    <div className='bg-black text-white p-2 rounded-lg'>
-                        <BsRobot size={18} />
-
+                    <div className='h-8 w-8 overflow-hidden rounded-lg bg-black text-white shadow-md shadow-black/20'>
+                        <img src={logo} alt="HireOX Logo" className="h-full w-full object-cover" />
                     </div>
                     <h2 className='font-semibold text-lg'>HireOX.AI</h2>
                 </div>
 
                 <h1 className='text-2xl md:text-3xl font-semibold text-center leading-snug mb-4'>
                     Continue with
-                    <span className='bg-green-100 text-green-600 px-3 py-1 rounded-full inline-flex items-center gap-2'>
+                    <span className='bg-[#5100FF]/10 text-[#A78BFA] px-3 py-1 rounded-full inline-flex items-center gap-2'>
                         <IoSparkles size={16} />
                         AI Smart Interview
 

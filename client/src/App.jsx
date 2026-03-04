@@ -39,7 +39,7 @@ function App() {
 
   useEffect(() => {
     let disposed = false;
-    let unsubscribeAuth = () => {};
+    let unsubscribeAuth = () => { };
 
     const resolveRequestPath = (url = "") => {
       if (typeof url !== "string" || !url) return "";
@@ -121,6 +121,7 @@ function App() {
           idToken,
           name: firebaseUser.displayName || "",
           email: firebaseUser.email || "",
+          photoURL: firebaseUser.photoURL || "",
         },
         { withCredentials: true }
       );

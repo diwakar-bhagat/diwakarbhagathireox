@@ -140,7 +140,7 @@ export default function OXbot() {
                         {/* Header */}
                         <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-slate-700/50 bg-white/40 dark:bg-slate-800/40">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold italic rotate-[-6deg]">
+                                <div className="w-8 h-8 rounded-full bg-[#5100FF] flex items-center justify-center text-white font-bold italic rotate-[-6deg]">
                                     OX
                                 </div>
                                 <span className="font-semibold text-gray-800 dark:text-gray-100">
@@ -170,8 +170,8 @@ export default function OXbot() {
                                 >
                                     <div
                                         className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${msg.role === "user"
-                                                ? "bg-emerald-500 text-white rounded-tr-sm"
-                                                : "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 rounded-tl-sm"
+                                            ? "bg-[#5100FF] text-white rounded-tr-sm"
+                                            : "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 rounded-tl-sm"
                                             }`}
                                     >
                                         {msg.content}
@@ -203,7 +203,7 @@ export default function OXbot() {
 
                         {/* Input Area */}
                         <div className="p-3 bg-white/50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700/50">
-                            <div className="flex items-end gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-2 focus-within:ring-2 ring-emerald-500/50 transition">
+                            <div className="flex items-end gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-2 focus-within:ring-2 ring-[#5100FF]/50 transition">
                                 <textarea
                                     className="flex-1 bg-transparent resize-none max-h-32 text-sm px-2 py-1 outline-none text-gray-800 dark:text-gray-200 placeholder-gray-400"
                                     rows={Math.min(3, input.split("\n").length || 1)}
@@ -215,7 +215,7 @@ export default function OXbot() {
                                 <button
                                     onClick={handleSend}
                                     disabled={!input.trim() || isThinking}
-                                    className="p-2 bg-emerald-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-600 transition self-end"
+                                    className="p-2 bg-[#5100FF] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#5728F4] transition self-end"
                                 >
                                     <FaPaperPlane size={12} />
                                 </button>
@@ -231,8 +231,8 @@ export default function OXbot() {
                 onClick={() => dispatch(toggleBot())}
                 className="pointer-events-auto bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl relative overflow-hidden"
             >
-                <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/20 to-transparent pointer-events-none" />
-                <span className="font-bold text-xl italic text-emerald-600 dark:text-emerald-400 -rotate-6">
+                <div className="absolute inset-0 bg-gradient-to-tr from-[#5100FF]/20 to-transparent pointer-events-none" />
+                <span className="font-bold text-xl italic text-[#8B5CF6] dark:text-[#A78BFA] -rotate-6">
                     OX
                 </span>
             </Motion.button>

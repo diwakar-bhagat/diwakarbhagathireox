@@ -21,11 +21,10 @@ function NetworkStatusPill() {
           transition={{ duration: shouldReduceMotion ? 0 : 0.3, ease: EASE_APPLE }}
         >
           <div
-            className={`rounded-full px-4 py-2 text-sm font-medium shadow-lg ${
-              isOffline
+            className={`rounded-full px-4 py-2 text-sm font-medium shadow-lg ${isOffline
                 ? "bg-red-500 text-white"
-                : "bg-emerald-500 text-white"
-            }`}
+                : "bg-[#5100FF] text-white"
+              }`}
           >
             {label}
           </div>

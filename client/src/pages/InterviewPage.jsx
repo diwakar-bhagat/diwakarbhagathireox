@@ -111,10 +111,10 @@ function InterviewPage() {
 
         {step === 2 && (!interviewData?.questions || interviewData.questions.length === 0) && (
           <div className='mx-auto max-w-2xl px-4 pt-20 text-center'>
-            <div className='rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm'>
-              <h2 className='text-xl font-bold text-gray-800 dark:text-gray-100'>Session Interrupted</h2>
-              <p className='mt-2 text-gray-500 dark:text-gray-400'>Your active interview data was lost upon refresh. Please resume safely from your history dashboard.</p>
-              <button onClick={() => navigate('/history')} className='mt-6 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition'>
+            <div className='glass-card p-8'>
+              <h2 className='text-xl font-bold text-slate-100'>Session Interrupted</h2>
+              <p className='mt-2 text-slate-400'>Your active interview data was lost upon refresh. Please resume safely from your history dashboard.</p>
+              <button onClick={() => navigate('/history')} className='mt-6 px-6 py-2 bg-[#5100FF] hover:bg-[#5728F4] text-white rounded-xl font-medium transition'>
                 View Interview History
               </button>
             </div>

@@ -481,9 +481,9 @@ function Step3Report({ report }) {
 
             {overallMetrics && (
               <div className="mt-5 grid grid-cols-2 gap-3 text-left">
-                <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-3 py-3 border border-emerald-100 dark:border-emerald-800/50">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Role Fit</p>
-                  <p className="mt-1 text-lg font-bold text-emerald-800 dark:text-emerald-200">{overallMetrics.roleFitPercent || 0}%</p>
+                <div className="rounded-xl bg-[#5100FF]/10 px-3 py-3 border border-[#5100FF]/20">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#A78BFA]">Role Fit</p>
+                  <p className="mt-1 text-lg font-bold text-[#A78BFA]">{overallMetrics.roleFitPercent || 0}%</p>
                 </div>
                 <div className="rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-3 border border-slate-200 dark:border-slate-700">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Completion</p>
@@ -518,7 +518,7 @@ function Step3Report({ report }) {
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Strengths</p>
                   <div className='flex flex-wrap gap-2'>
                     {overallStrengths.slice(0, 6).map((item, index) => (
-                      <span key={index} className='text-[10px] sm:text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-1 rounded-md border border-emerald-100 dark:border-emerald-800/50'>
+                      <span key={index} className='text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] px-2 py-1 rounded-md border border-[#5100FF]/20'>
                         {item}
                       </span>
                     ))}
@@ -560,11 +560,11 @@ function Step3Report({ report }) {
                     <div className='flex justify-between mb-2 text-sm sm:text-base text-gray-600 dark:text-gray-300'>
 
                       <span>{s.label}</span>
-                      <span className='font-semibold text-green-600 dark:text-green-400'>{s.value}</span>
+                      <span className='font-semibold text-[#8B5CF6]'>{s.value}</span>
                     </div>
 
                     <div className='bg-gray-200 dark:bg-slate-800 h-2 sm:h-3 rounded-full overflow-hidden'>
-                      <div className='bg-green-500 dark:bg-green-400 h-full rounded-full transition-all duration-500'
+                      <div className='bg-[#8B5CF6] h-full rounded-full transition-all duration-500'
                         style={{ width: `${s.value * 10}%` }}
 
                       ></div>
@@ -604,9 +604,9 @@ function Step3Report({ report }) {
               </h3>
 
               <div className="grid grid-cols-3 gap-3 mb-5">
-                <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-3 py-3 border border-emerald-100 dark:border-emerald-800/50">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Match</p>
-                  <p className="mt-1 text-lg font-bold text-emerald-800 dark:text-emerald-200">{atsMetrics.matchPercent || 0}%</p>
+                <div className="rounded-xl bg-[#5100FF]/10 px-3 py-3 border border-[#5100FF]/20">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#A78BFA]">Match</p>
+                  <p className="mt-1 text-lg font-bold text-[#A78BFA]">{atsMetrics.matchPercent || 0}%</p>
                 </div>
                 <div className="rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-3 border border-slate-200 dark:border-slate-700">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Matched</p>
@@ -732,7 +732,7 @@ function Step3Report({ report }) {
                           {dayItem.title || `Day ${dayItem.day}`}
                         </p>
                       </div>
-                      <span className='text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'>
+                      <span className='text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-full bg-[#5100FF]/10 text-[#A78BFA]'>
                         Action
                       </span>
                     </div>
@@ -741,7 +741,7 @@ function Step3Report({ report }) {
                       <ul className='space-y-2 text-sm text-gray-700 dark:text-gray-300'>
                         {dayItem.tasks.slice(0, 3).map((task, taskIndex) => (
                           <li key={taskIndex} className='flex items-start gap-2'>
-                            <span className='mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0'></span>
+                            <span className='mt-1 h-1.5 w-1.5 rounded-full bg-[#8B5CF6] shrink-0'></span>
                             <span>{task}</span>
                           </li>
                         ))}
@@ -749,8 +749,8 @@ function Step3Report({ report }) {
                     )}
 
                     {dayItem.expectedOutcome && (
-                      <div className='mt-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 px-3 py-3'>
-                        <p className='text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1'>
+                      <div className='mt-4 rounded-lg bg-[#5100FF]/10 border border-[#5100FF]/20 px-3 py-3'>
+                        <p className='text-xs text-[#8B5CF6] font-semibold mb-1'>
                           Expected Outcome
                         </p>
                         <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed'>
@@ -789,7 +789,7 @@ function Step3Report({ report }) {
                   {reportQuestions[i]?.taggedSkills?.length > 0 && (
                     <div className='mb-3 flex flex-wrap gap-2'>
                       {reportQuestions[i].taggedSkills.slice(0, 4).map((skill, skillIndex) => (
-                        <span key={skillIndex} className='text-[10px] sm:text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-1 rounded-md border border-emerald-100 dark:border-emerald-800/50'>
+                        <span key={skillIndex} className='text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] px-2 py-1 rounded-md border border-[#5100FF]/20'>
                           {skill}
                         </span>
                       ))}
@@ -808,13 +808,13 @@ function Step3Report({ report }) {
                     </div>
 
 
-                    <div className='bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-3 py-1 rounded-full font-bold text-xs sm:text-sm w-fit shadow-sm'>
+                    <div className='bg-[#5100FF]/10 text-[#8B5CF6] px-3 py-1 rounded-full font-bold text-xs sm:text-sm w-fit shadow-sm'>
                       {formatScore(q.score)}/10
                     </div>
                   </div>
 
-                  <div className='bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-800/30 p-4 rounded-lg'>
-                    <p className='text-xs text-green-600 dark:text-green-500 font-semibold mb-1'>
+                  <div className='bg-[#5100FF]/10 border border-[#5100FF]/20 p-4 rounded-lg'>
+                    <p className='text-xs text-[#8B5CF6] font-semibold mb-1'>
                       AI Feedback
                     </p>
                     <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium'>

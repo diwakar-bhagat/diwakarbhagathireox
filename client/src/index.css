@@ -22,12 +22,12 @@ html.dark {
 }
 
 body {
-  background-color: #f3f3f3;
-  color: #111827;
+  background-color: #101010;
+  color: #e2e8f0;
 }
 
 html.dark body {
-  background-color: #020617;
+  background-color: #101010;
   color: #e2e8f0;
 }
 
@@ -120,31 +120,39 @@ html.theme-transition *::after {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     transition: all 300ms cubic-bezier(0, 0, 0.2, 1);
   }
-  
+
   .glass-card:hover {
     border: 1px solid rgba(109, 91, 255, 0.3);
     box-shadow: 0 8px 40px rgba(109, 91, 255, 0.15);
   }
-  
+
   .neon-text-purple {
     text-shadow: 0 0 20px rgba(109, 91, 255, 0.6);
   }
-  
+
   .bg-base-navy {
     background-color: #050816;
   }
-  
+
   .circuit-pulse {
     mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
     animation: pulseGrid 4s ease-in-out infinite;
   }
-  
+
   @keyframes pulseGrid {
-    0% { opacity: 0.4; }
-    50% { opacity: 0.8; }
-    100% { opacity: 0.4; }
+    0% {
+      opacity: 0.4;
+    }
+
+    50% {
+      opacity: 0.8;
+    }
+
+    100% {
+      opacity: 0.4;
+    }
   }
-  
+
   @media (prefers-reduced-motion: reduce) {
     .circuit-pulse {
       animation: none;

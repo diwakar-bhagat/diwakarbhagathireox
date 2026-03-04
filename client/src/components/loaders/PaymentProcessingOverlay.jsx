@@ -8,20 +8,20 @@ const statusMeta = {
   processing: {
     title: "Securing your transaction",
     subtitle: "Please don't refresh",
-    accent: "text-emerald-500",
-    border: "border-emerald-200 dark:border-emerald-700/60",
+    accent: "text-[#8B5CF6]",
+    border: "border-[#5100FF]/30",
   },
   success: {
     title: "Transaction verified",
     subtitle: "Applying credits to your account",
-    accent: "text-emerald-500",
-    border: "border-emerald-200 dark:border-emerald-700/60",
+    accent: "text-[#8B5CF6]",
+    border: "border-[#5100FF]/30",
   },
   error: {
     title: "Payment interrupted",
     subtitle: "Please try again",
-    accent: "text-red-500",
-    border: "border-red-200 dark:border-red-700/60",
+    accent: "text-red-400",
+    border: "border-red-500/30",
   },
 };
 
@@ -60,14 +60,14 @@ function PaymentProcessingOverlay() {
     <AnimatePresence>
       {isVisible && (
         <Motion.div
-          className="fixed inset-0 z-[121] bg-black/30 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[121] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: shouldReduceMotion ? 0 : 0.28, ease: EASE_APPLE }}
         >
           <Motion.div
-            className={`relative w-full max-w-sm rounded-2xl border ${meta.border} bg-white dark:bg-slate-900 shadow-2xl p-6 text-center`}
+            className={`relative w-full max-w-sm rounded-2xl border ${meta.border} glass-card shadow-2xl p-6 text-center`}
             initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: 1 }}
             animate={
               status === "error" && !shouldReduceMotion
@@ -79,7 +79,7 @@ function PaymentProcessingOverlay() {
           >
             {status === "success" && !shouldReduceMotion && (
               <Motion.div
-                className="absolute inset-0 rounded-2xl bg-emerald-400/15"
+                className="absolute inset-0 rounded-2xl bg-[#5100FF]/15"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: [0, 1, 0] }}
                 transition={{ duration: 0.45, ease: EASE_APPLE }}
@@ -89,26 +89,26 @@ function PaymentProcessingOverlay() {
             <div className="relative z-10 flex flex-col items-center gap-4">
               {status === "processing" && (
                 <Motion.div
-                  className="h-12 w-12 rounded-full border-[3px] border-emerald-200 dark:border-emerald-800 border-t-emerald-500"
+                  className="h-12 w-12 rounded-full border-[3px] border-[#5100FF]/20 border-t-[#8B5CF6]"
                   animate={shouldReduceMotion ? undefined : { rotate: 360 }}
                   transition={{ duration: 0.95, ease: "linear", repeat: Infinity }}
                 />
               )}
 
               {status === "success" && (
-                <div className="h-12 w-12 rounded-full grid place-items-center bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 text-xl font-bold">
+                <div className="h-12 w-12 rounded-full grid place-items-center bg-[#5100FF]/20 text-[#A78BFA] text-xl font-bold">
                   ✓
                 </div>
               )}
 
               {status === "error" && (
-                <div className="h-12 w-12 rounded-full grid place-items-center bg-red-100 dark:bg-red-900/30 text-red-500 text-xl font-bold">
+                <div className="h-12 w-12 rounded-full grid place-items-center bg-red-500/20 text-red-400 text-xl font-bold">
                   !
                 </div>
               )}
 
               <p className={`text-base font-semibold ${meta.accent}`}>{meta.title}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-slate-400">
                 {message || meta.subtitle}
               </p>
             </div>

@@ -13,6 +13,7 @@ export const googleAuth = async (req, res) => {
 
     const decoded = await verifyFirebaseIdToken(idToken);
     const email = decoded.email?.trim().toLowerCase();
+    const photoURL = decoded.picture || req.body?.photoURL || "";
     const name =
       decoded.name?.trim() ||
       req.body?.name?.trim() ||
@@ -27,7 +28,14 @@ export const googleAuth = async (req, res) => {
       user = await User.create({
         name: name || "User",
         email,
+        photoURL,
       });
+    } else {
+      // Update photoURL if it changed or was missing
+      if (photoURL && user.photoURL !== photoURL) {
+        user.photoURL = photoURL;
+        await user.save();
+      }
     }
 
     const token = genToken(user._id);

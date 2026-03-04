@@ -11,7 +11,7 @@ function AppPreloader() {
     <AnimatePresence>
       {appBooting && (
         <Motion.div
-          className="fixed inset-0 z-[140] bg-black text-white flex items-center justify-center"
+          className="fixed inset-0 z-[140] bg-[#101010] text-white flex items-center justify-center"
           initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{
@@ -34,7 +34,7 @@ function AppPreloader() {
 
             <div className="w-full h-[6px] rounded-full bg-white/20 overflow-hidden">
               <Motion.div
-                className="h-full w-full bg-emerald-400"
+                className="h-full w-full bg-[#8B5CF6]"
                 style={{ transformOrigin: "0% 50%" }}
                 animate={{ scaleX: Math.max(0, Math.min(1, bootProgress / 100)) }}
                 transition={{ duration: shouldReduceMotion ? 0 : 0.35, ease: EASE_APPLE }}

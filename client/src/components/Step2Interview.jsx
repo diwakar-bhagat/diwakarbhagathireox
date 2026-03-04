@@ -35,7 +35,7 @@ const AnswerInput = React.memo(React.forwardRef(({ disabled, value, onChange }, 
       }}
       value={text}
       style={{ touchAction: 'pan-y' }}
-      className="flex-1 bg-gray-100 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl resize-none outline-none border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-600 transition text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+      className="flex-1 bg-gray-100 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl resize-none outline-none border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-[#5100FF] transition text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
     />
   );
 }));
@@ -566,14 +566,14 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
 
   return (
-    <div className='min-h-screen bg-linear-to-br from-emerald-50 via-white to-teal-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4 sm:p-6 transition-colors duration-300'>
+    <div className='min-h-screen relative z-10 flex items-center justify-center p-4 sm:p-6 transition-colors duration-300'>
       <div className='w-full max-w-350 min-h-[80vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 flex flex-col lg:flex-row overflow-hidden'>
 
         {/* video section */}
         <div className='w-full lg:w-[35%] bg-white dark:bg-slate-900 flex flex-col items-center p-6 space-y-6 border-r border-gray-200 dark:border-slate-800'>
           <div className='w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-transparent dark:border-slate-700'>
             {videoUnavailable ? (
-              <div className="flex aspect-video items-center justify-center bg-linear-to-br from-emerald-100 to-teal-100 px-6 text-center text-sm font-medium text-emerald-800 dark:from-slate-800 dark:to-slate-700 dark:text-emerald-300">
+              <div className="flex aspect-video items-center justify-center bg-[#5100FF]/10 px-6 text-center text-sm font-medium text-[#A78BFA]">
                 AI interviewer is ready. Continue with text and audio prompts.
               </div>
             ) : (
@@ -604,7 +604,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
               <span className='text-sm text-gray-500 dark:text-gray-400'>
                 Interview Status
               </span>
-              {isAIPlaying && <span className='text-sm font-semibold text-emerald-600 dark:text-emerald-400'>
+              {isAIPlaying && <span className='text-sm font-semibold text-[#8B5CF6]'>
                 {isAIPlaying ? "AI Speaking" : ""}
               </span>}
             </div>
@@ -624,12 +624,12 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
             <div className='grid grid-cols-2 gap-6 text-center'>
               <div>
-                <span className='text-2xl font-bold text-emerald-600 dark:text-emerald-400'>{currentIndex + 1}</span>
+                <span className='text-2xl font-bold text-[#8B5CF6]'>{currentIndex + 1}</span>
                 <p className='text-xs text-gray-400 dark:text-gray-500'>Current Questions</p>
               </div>
 
               <div>
-                <span className='text-2xl font-bold text-emerald-600 dark:text-emerald-400'>{dynamicQuestions.length}</span>
+                <span className='text-2xl font-bold text-[#8B5CF6]'>{dynamicQuestions.length}</span>
                 <p className='text-xs text-gray-400 dark:text-gray-500'>Total Questions</p>
               </div>
             </div>
@@ -641,7 +641,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
         {/* Text section */}
 
         <div className='flex-1 flex flex-col p-4 sm:p-6 md:p-8 relative bg-white dark:bg-slate-900'>
-          <h2 className='text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-6'>
+          <h2 className='text-xl sm:text-2xl font-bold text-[#8B5CF6] mb-6'>
             AI Smart Interview
           </h2>
 
@@ -702,18 +702,18 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
                 className='flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200/50 dark:border-slate-700/50'
               >
                 {agentMeta.strategy && (
-                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-emerald-100/60 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full border border-emerald-200/60 dark:border-emerald-800/50 flex items-center gap-1 capitalize'>
+                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] rounded-full border border-[#5100FF]/20 flex items-center gap-1 capitalize'>
                     <IoSparkles size={10} className="hidden sm:inline" />
                     {agentMeta.strategy.replace(/_/g, " ")}
                   </span>
                 )}
                 {agentMeta.difficulty && (
-                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-emerald-100/60 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full border border-emerald-200/60 dark:border-emerald-800/50'>
+                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] rounded-full border border-[#5100FF]/20'>
                     Diff: L{agentMeta.difficulty}
                   </span>
                 )}
                 {agentMeta.weakness?.length > 0 && (
-                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-emerald-100/60 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full border border-emerald-200/60 dark:border-emerald-800/50 capitalize'>
+                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] rounded-full border border-[#5100FF]/20 capitalize'>
                     Focus: {agentMeta.weakness.join(", ")}
                   </span>
                 )}
@@ -734,7 +734,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
                   onClick={toggleMic}
                   disabled={!micSupported}
                   whileTap={{ scale: 0.9 }}
-                  className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black dark:bg-emerald-600 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed'>
+                  className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black bg-[#5100FF] text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed'>
                   {isMicOn ? <FaMicrophone size={20} /> : <FaMicrophoneSlash size={20} />}
                 </Motion.button>
 
@@ -742,7 +742,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
                   onClick={submitAnswer}
                   disabled={isSubmitting}
                   whileTap={{ scale: 0.95 }}
-                  className='flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white py-3 sm:py-4 rounded-2xl shadow-lg hover:opacity-90 transition font-semibold disabled:bg-gray-500 dark:disabled:bg-slate-800'>
+                  className='flex-1 bg-[#5100FF] hover:bg-[#5728F4] text-white py-3 sm:py-4 rounded-2xl shadow-lg hover:opacity-90 transition font-semibold disabled:bg-gray-500 dark:disabled:bg-slate-800'>
                   {isSubmitting ? "Submitting..." : "Submit Answer"}
                 </Motion.button>
               </div>
@@ -757,9 +757,9 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
               animate={{ opacity: 1, y: 0 }}
               className='mt-6 space-y-4'
             >
-              <div className='bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 p-5 rounded-2xl shadow-sm'>
-                <h4 className='text-[11px] uppercase tracking-wide font-bold text-emerald-800 dark:text-emerald-400 mb-2'>AI Feedback</h4>
-                <p className='text-emerald-700 dark:text-emerald-300 font-medium'>{feedback}</p>
+              <div className='bg-[#5100FF]/10 border border-[#5100FF]/20 p-5 rounded-2xl shadow-sm'>
+                <h4 className='text-[11px] uppercase tracking-wide font-bold text-[#A78BFA] mb-2'>AI Feedback</h4>
+                <p className='text-[#A78BFA] font-medium'>{feedback}</p>
               </div>
 
               {agentMeta && agentMeta.coachingTip && (
@@ -786,7 +786,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
               <button
                 onClick={handleNext}
-                className='w-full bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-500 dark:to-teal-400 text-white py-3 sm:py-4 rounded-xl shadow-md hover:opacity-90 transition flex items-center justify-center gap-2 font-semibold'>
+                className='w-full bg-[#5100FF] hover:bg-[#5728F4] text-white py-3 sm:py-4 rounded-xl shadow-md hover:opacity-90 transition flex items-center justify-center gap-2 font-semibold'>
                 Next Question <BsArrowRight size={18} />
               </button>
             </Motion.div>

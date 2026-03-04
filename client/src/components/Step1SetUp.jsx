@@ -233,11 +233,11 @@ function Step1SetUp({ onStart }) {
     };
 
     return (
-        <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-emerald-50 dark:from-slate-950 dark:to-slate-900 px-4 py-8 transition-colors duration-300'>
+        <div className='min-h-screen flex items-center justify-center relative z-10 px-4 py-8 transition-colors duration-300'>
             <div className='w-full max-w-6xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl grid md:grid-cols-[1.1fr_1fr] overflow-hidden border border-gray-100 dark:border-slate-800 min-h-[85vh]'>
 
                 {/* LEFT COLUMN: INTRO OR PHASE B (PLAN PREVIEW) */}
-                <div className='relative bg-gradient-to-br from-emerald-50 to-green-100 dark:from-slate-800/80 dark:to-slate-900 p-8 lg:p-12 flex flex-col border-r border-gray-100 dark:border-slate-800 overflow-y-auto'>
+                <div className='relative bg-white/3 backdrop-blur-xl p-8 lg:p-12 flex flex-col border-r border-gray-100 dark:border-slate-800 overflow-y-auto'>
 
                     <AnimatePresence mode="wait">
                         {!resumeAnalysis ? (
@@ -248,7 +248,7 @@ function Step1SetUp({ onStart }) {
                                 exit={{ opacity: 0, x: -20 }}
                                 className="my-auto"
                             >
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-sm font-semibold mb-6">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#5100FF]/10 text-[#A78BFA] text-sm font-semibold mb-6">
                                     <IoSparkles /> Stage-1: Planning
                                 </div>
                                 <h2 className="text-4xl font-bold text-gray-800 dark:text-white mb-6 leading-tight">
@@ -265,7 +265,7 @@ function Step1SetUp({ onStart }) {
                                         { icon: <IoSparkles />, text: "AI generates personalized evaluation strategy" },
                                     ].map((item, index) => (
                                         <div key={index} className='flex items-center space-x-4 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm p-4 rounded-xl border border-white/40 dark:border-slate-700/50 text-gray-700 dark:text-gray-200'>
-                                            <div className="text-emerald-600 dark:text-emerald-400 text-xl">{item.icon}</div>
+                                            <div className="text-[#8B5CF6] text-xl">{item.icon}</div>
                                             <span className='font-medium'>{item.text}</span>
                                         </div>
                                     ))}
@@ -283,7 +283,7 @@ function Step1SetUp({ onStart }) {
                                     <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
                                         Interview Plan
                                     </h2>
-                                    <span className="px-3 py-1 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-sm">
+                                    <span className="px-3 py-1 bg-[#5100FF] text-white text-xs font-bold rounded-full shadow-sm">
                                         {useJd && gapAnalysis ? "JD Aligned" : "Resume Based"}
                                     </span>
                                 </div>
@@ -291,8 +291,8 @@ function Step1SetUp({ onStart }) {
                                 {/* Match Score Card */}
                                 <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center border-[4px] border-emerald-50 dark:border-emerald-900">
-                                            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                                        <div className="w-16 h-16 rounded-full bg-[#5100FF]/15 flex items-center justify-center border-[4px] border-[#5100FF]/20">
+                                            <span className="text-xl font-bold text-[#8B5CF6]">
                                                 {atsMatch
                                                     ? `${atsMatch.matchPercent}%`
                                                     : gapAnalysis
@@ -315,9 +315,9 @@ function Step1SetUp({ onStart }) {
                                     </div>
                                     {atsMatch && (
                                         <div className="mt-4 grid grid-cols-2 gap-3">
-                                            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 border border-emerald-100 dark:border-emerald-800/50">
-                                                <div className="text-[11px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">Resume Coverage</div>
-                                                <div className="mt-1 text-lg font-bold text-emerald-800 dark:text-emerald-200">{atsMatch.resumeKeywordCoverage || 0}%</div>
+                                            <div className="rounded-xl bg-[#5100FF]/10 px-3 py-2 border border-[#5100FF]/20">
+                                                <div className="text-[11px] uppercase tracking-wide text-[#A78BFA] font-semibold">Resume Coverage</div>
+                                                <div className="mt-1 text-lg font-bold text-[#A78BFA]">{atsMatch.resumeKeywordCoverage || 0}%</div>
                                             </div>
                                             <div className="rounded-xl bg-slate-100 dark:bg-slate-700/60 px-3 py-2 border border-slate-200 dark:border-slate-600">
                                                 <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-300 font-semibold">JD Coverage</div>
@@ -347,7 +347,7 @@ function Step1SetUp({ onStart }) {
                                             </span>
                                         ))}
                                         {/* Starting Difficulty Chip */}
-                                        <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 shadow-sm border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 ml-auto">
+                                        <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#5100FF]/10 text-[#A78BFA] shadow-sm border border-[#5100FF]/20 flex items-center gap-1 ml-auto">
                                             Start Level: {interviewPlan?.start_difficulty || 2}/5
                                         </span>
                                     </div>
@@ -356,10 +356,10 @@ function Step1SetUp({ onStart }) {
                                 {/* Strengths & Gaps */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700">
-                                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3 flex items-center gap-1.5"><FaCheckCircle className="text-emerald-500" /> Strengths</h4>
+                                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3 flex items-center gap-1.5"><FaCheckCircle className="text-[#8B5CF6]" /> Strengths</h4>
                                         <div className="flex flex-wrap gap-1.5">
                                             {(gapAnalysis?.strongMatches || resumeAnalysis.skills?.slice(0, 5) || []).map((s, i) => (
-                                                <span key={i} className="text-[10px] sm:text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-1 rounded-md border border-emerald-100 dark:border-emerald-800/50">{s}</span>
+                                                <span key={i} className="text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] px-2 py-1 rounded-md border border-[#5100FF]/20">{s}</span>
                                             ))}
                                         </div>
                                     </div>
@@ -380,7 +380,7 @@ function Step1SetUp({ onStart }) {
                                             <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">Matched Must-Haves</h4>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {(atsMatch.matchedMustHaves || []).slice(0, 5).map((item, index) => (
-                                                    <span key={index} className="text-[10px] sm:text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-1 rounded-md border border-emerald-100 dark:border-emerald-800/50">
+                                                    <span key={index} className="text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] px-2 py-1 rounded-md border border-[#5100FF]/20">
                                                         {item}
                                                     </span>
                                                 ))}
@@ -440,7 +440,7 @@ function Step1SetUp({ onStart }) {
 
                     <div className="mb-8 flex justify-between items-end">
                         <h2 className='text-3xl font-bold text-gray-800 dark:text-white'>Interview SetUp</h2>
-                        {resumeAnalysis && <span className="text-sm font-medium text-emerald-600 flex items-center gap-1"><FaCheckCircle /> Resume Linked</span>}
+                        {resumeAnalysis && <span className="text-sm font-medium text-[#8B5CF6] flex items-center gap-1"><FaCheckCircle /> Resume Linked</span>}
                     </div>
 
                     {errorMessage && (
@@ -473,8 +473,8 @@ function Step1SetUp({ onStart }) {
                                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Step 1: Resume Upload</label>
                                 <div
                                     onClick={() => document.getElementById("resumeUpload").click()}
-                                    className='border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-6 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition'>
-                                    <FaFileUpload className='text-3xl mx-auto text-emerald-600 dark:text-emerald-500 mb-2' />
+                                    className='border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-6 text-center cursor-pointer hover:border-[#5100FF] hover:bg-[#5100FF]/5 transition'>
+                                    <FaFileUpload className='text-3xl mx-auto text-[#8B5CF6] mb-2' />
                                     <input type="file" accept="application/pdf" id="resumeUpload" className='hidden' onChange={(e) => setResumeFile(e.target.files[0])} />
                                     <p className='text-gray-600 dark:text-gray-400 font-medium text-sm'>
                                         {resumeFile ? resumeFile.name : "Click to select PDF resume"}
@@ -484,7 +484,7 @@ function Step1SetUp({ onStart }) {
                                     <button
                                         disabled={analyzingResume}
                                         onClick={(e) => { e.stopPropagation(); handleUploadResume(); }}
-                                        className='w-full mt-4 bg-gray-900 dark:bg-emerald-600 text-white py-2.5 rounded-xl hover:bg-gray-800 dark:hover:bg-emerald-500 transition font-medium text-sm disabled:opacity-70'>
+                                        className='w-full mt-4 bg-gray-900 bg-[#5100FF] text-white py-2.5 rounded-xl hover:bg-gray-800 hover:bg-[#5728F4] transition font-medium text-sm disabled:opacity-70'>
                                         {analyzingResume ? "Analyzing Resume..." : "Extract Profile"}
                                     </button>
                                 )}
@@ -497,19 +497,19 @@ function Step1SetUp({ onStart }) {
                                 <div className='relative'>
                                     <FaUserTie className='absolute top-3.5 left-4 text-gray-400' />
                                     <input type='text' placeholder='Role'
-                                        className='w-full pl-11 pr-3 py-3 bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-gray-800 dark:text-white text-sm'
+                                        className='w-full pl-11 pr-3 py-3 bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#5100FF] outline-none text-gray-800 dark:text-white text-sm'
                                         onChange={(e) => setRole(e.target.value)} value={role} disabled={!resumeAnalysis} />
                                 </div>
                                 <div className='relative'>
                                     <FaBriefcase className='absolute top-3.5 left-4 text-gray-400' />
                                     <input type='text' placeholder='Experience'
-                                        className='w-full pl-11 pr-3 py-3 bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-gray-800 dark:text-white text-sm'
+                                        className='w-full pl-11 pr-3 py-3 bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#5100FF] outline-none text-gray-800 dark:text-white text-sm'
                                         onChange={(e) => setExperience(e.target.value)} value={experience} disabled={!resumeAnalysis} />
                                 </div>
                             </div>
 
                             <select value={mode} onChange={(e) => setMode(e.target.value)} disabled={!resumeAnalysis}
-                                className='w-full py-3 px-4 bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-gray-800 dark:text-white text-sm'>
+                                className='w-full py-3 px-4 bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#5100FF] outline-none text-gray-800 dark:text-white text-sm'>
                                 <option value="Technical">Technical Interview</option>
                                 <option value="HR">Behavioral / HR Interview</option>
                             </select>
@@ -524,7 +524,7 @@ function Step1SetUp({ onStart }) {
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
                                     <input type="checkbox" className="sr-only peer" checked={useJd} onChange={() => setUseJd(!useJd)} />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#5100FF]"></div>
                                 </label>
                             </div>
 
@@ -542,7 +542,7 @@ function Step1SetUp({ onStart }) {
                                             <textarea
                                                 placeholder="Paste Job Description here..."
                                                 rows="3"
-                                                className="w-full p-3 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+                                                className="w-full p-3 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#5100FF] outline-none resize-none"
                                                 value={jdText}
                                                 onChange={(e) => setJdText(e.target.value)}
                                             />
@@ -572,7 +572,7 @@ function Step1SetUp({ onStart }) {
                         <button
                             onClick={handleStart}
                             disabled={!role || !resumeAnalysis || loading}
-                            className='w-full mt-auto disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-slate-800 dark:disabled:text-gray-600 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl text-lg font-semibold transition duration-300 shadow-lg shadow-emerald-500/20 active:scale-[0.98]'>
+                            className='w-full mt-auto disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-slate-800 dark:disabled:text-gray-600 bg-[#5100FF] hover:bg-[#5728F4] text-white py-4 rounded-xl text-lg font-semibold transition duration-300 shadow-lg shadow-[#5100FF]/20 active:scale-[0.98]'>
                             {loading ? "Starting Workspace..." : (useJd && jdAnalysis ? "Start JD-Aligned Interview" : "Start Resume-Based Interview")}
                         </button>
                     </div>

@@ -41,6 +41,8 @@ const useLiveStats = () => {
   return stats;
 };
 
+import logo from "../assets/image.png";
+
 function Navbar() {
   const { userData } = useSelector((state) => state.user);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
@@ -132,8 +134,8 @@ function Navbar() {
               onClick={() => navigate("/")}
               className="flex items-center gap-2.5 sm:gap-3 rounded-xl px-2 py-1.5 hover:bg-white/60 dark:hover:bg-slate-800/60 transition"
             >
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-black text-white shadow-md shadow-black/20">
-                <BsRobot size={17} />
+              <div className="grid h-9 w-9 overflow-hidden place-items-center rounded-xl bg-black text-white shadow-md shadow-black/20">
+                <img src={logo} alt="HireOX Logo" className="h-full w-full object-cover" />
               </div>
               <h1 className="font-semibold text-sm sm:text-base lg:text-lg text-slate-800 dark:text-slate-100">
                 HireOX.AI
@@ -181,7 +183,7 @@ function Navbar() {
                     </p>
                     <button
                       onClick={() => navigate("/pricing")}
-                      className="w-full rounded-xl bg-black text-white py-2.5 text-sm font-medium hover:opacity-90 transition"
+                      className="w-full rounded-xl bg-[#5100FF] text-white py-2.5 text-sm font-medium hover:bg-[#5728F4] transition shadow-[0_0_20px_rgba(81,0,255,0.2)]"
                     >
                       Buy more credits
                     </button>
@@ -199,10 +201,14 @@ function Navbar() {
                     setShowUserPopup((prev) => !prev);
                     setShowCreditPopup(false);
                   }}
-                  className="h-10 w-10 rounded-full bg-black text-white grid place-items-center font-semibold shadow-md shadow-black/25"
+                  className="h-10 w-10 rounded-full bg-[#5100FF] text-white overflow-hidden grid place-items-center font-semibold shadow-md shadow-[#5100FF]/25"
                 >
                   {userData ? (
-                    userData?.name.slice(0, 1).toUpperCase()
+                    userData.photoURL ? (
+                      <img src={userData.photoURL} alt={userData.name} className="h-full w-full object-cover" />
+                    ) : (
+                      userData?.name?.slice(0, 1).toUpperCase()
+                    )
                   ) : (
                     <FaUserAstronaut size={15} />
                   )}

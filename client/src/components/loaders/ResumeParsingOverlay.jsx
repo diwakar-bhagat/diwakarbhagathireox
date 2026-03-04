@@ -49,7 +49,7 @@ function ResumeParsingOverlay() {
 
             <div className="mt-5 flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-300">
               <Motion.span
-                className="h-2 w-2 rounded-full bg-emerald-500"
+                className="h-2 w-2 rounded-full bg-[#8B5CF6]"
                 animate={shouldReduceMotion ? undefined : { opacity: [0.4, 1, 0.4] }}
                 transition={{ duration: 1.1, repeat: Infinity, ease: EASE_APPLE }}
               />

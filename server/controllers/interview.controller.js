@@ -10,7 +10,7 @@ import Interview from "../models/interview.model.js";
 const isOwnedInterview = (interview, userId) =>
   String(interview.userId) === String(userId);
 const CREDIT_COST_PER_INTERVIEW = 50;
-const ACTIVE_INTERVIEW_STATUSES = ["Incompleted", "in_progress"];
+const ACTIVE_INTERVIEW_STATUSES = ["Incompleted", "in_progress", "abandoned"];
 const ACTIVE_INTERVIEW_DEBOUNCE_MS = 15000;
 
 const isActiveInterviewStatus = (status) => ACTIVE_INTERVIEW_STATUSES.includes(status);
@@ -2336,26 +2336,76 @@ export const deleteInterviewSession = async (req, res) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
+    if (interview.status === "completed") {
+      return res.status(409).json({ message: "Completed interviews cannot be deleted." });
+    }
+
     if (interview.reportGenerationStatus === "pending") {
       return res.status(409).json({ message: "Report generation is still pending" });
     }
 
-    if (isActiveInterviewStatus(interview.status)) {
-      return res.status(409).json({ message: "Cannot delete an in-progress interview session" });
+    if (
+      interview.status !== "in_progress"
+      && interview.status !== "abandoned"
+      && interview.status !== "Incompleted"
+    ) {
+      return res.status(409).json({ message: "Only unfinished interview sessions can be deleted" });
     }
 
-    if (interview.status !== "completed" && interview.status !== "abandoned") {
-      return res.status(409).json({ message: "Only completed or abandoned sessions can be deleted" });
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const previousCreditsCharged = Number(interview.creditsCharged) || 0;
+    const previousChargedAt = interview.chargedAt || null;
+    const chargeNeeded = previousCreditsCharged <= 0;
+    let creditsDeducted = false;
+
+    if (chargeNeeded) {
+      if ((Number(user.credits) || 0) < CREDIT_COST_PER_INTERVIEW) {
+        return res.status(402).json({ message: "Insufficient credits" });
+      }
+
+      user.credits = (Number(user.credits) || 0) - CREDIT_COST_PER_INTERVIEW;
+      await user.save();
+      creditsDeducted = true;
+
+      try {
+        interview.creditsCharged = CREDIT_COST_PER_INTERVIEW;
+        interview.chargedAt = new Date();
+        await interview.save();
+      } catch (error) {
+        user.credits += CREDIT_COST_PER_INTERVIEW;
+        await user.save().catch(() => {});
+        throw error;
+      }
     }
 
     const reportPdfPath = normalizeText(interview?.reportPdfPath);
+
+    try {
+      await interview.deleteOne();
+    } catch (error) {
+      if (creditsDeducted) {
+        user.credits += CREDIT_COST_PER_INTERVIEW;
+        await user.save().catch(() => {});
+
+        interview.creditsCharged = previousCreditsCharged;
+        interview.chargedAt = previousChargedAt;
+        await interview.save().catch(() => {});
+      }
+      throw error;
+    }
+
     if (reportPdfPath) {
       safeUnlinkFile(reportPdfPath);
     }
 
-    await interview.deleteOne();
-
-    return res.status(200).json({ success: true });
+    return res.status(200).json({
+      success: true,
+      creditsLeft: Number(user.credits) || 0,
+    });
   } catch (error) {
     console.error("failed to delete interview session", error);
     return res.status(500).json({ message: "Failed to delete interview session" });

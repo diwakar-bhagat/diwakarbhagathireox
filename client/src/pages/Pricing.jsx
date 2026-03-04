@@ -116,7 +116,7 @@ function Pricing() {
           },
         },
         theme: {
-          color: "#10b981",
+          color: "#5100FF",
         },
       }
 
@@ -136,19 +136,19 @@ function Pricing() {
 
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50 py-16 px-6'>
+    <div className='min-h-screen py-16 px-6 relative z-10'>
 
       <div className='max-w-6xl mx-auto mb-14 flex items-start gap-4'>
 
-        <button onClick={() => navigate("/")} className='mt-2 p-3 rounded-full bg-white shadow hover:shadow-md transition'>
-          <FaArrowLeft className='text-gray-600' />
+        <button onClick={() => navigate("/")} className='mt-2 p-3 rounded-full glass-card hover:bg-white/10 transition'>
+          <FaArrowLeft className='text-slate-300' />
         </button>
 
         <div className="text-center w-full">
-          <h1 className="text-4xl font-bold text-gray-800">
+          <h1 className="text-4xl font-bold text-slate-100">
             Choose Your Plan
           </h1>
-          <p className="text-gray-500 mt-3 text-lg">
+          <p className="text-slate-400 mt-3 text-lg">
             Flexible pricing to match your interview preparation goals.
           </p>
         </div>
@@ -165,10 +165,10 @@ function Pricing() {
               whileHover={!plan.default && { scale: 1.03 }}
               onClick={() => !plan.default && setSelectedPlan(plan.id)}
 
-              className={`relative rounded-3xl p-8 transition-all duration-300 border 
+              className={`relative glass-card p-8 transition-all duration-300 
                 ${isSelected
-                  ? "border-emerald-600 shadow-2xl bg-white"
-                  : "border-gray-200 bg-white shadow-md"
+                  ? "border-[#5100FF] shadow-[0_0_30px_rgba(81,0,255,0.25)]"
+                  : ""
                 }
                 ${plan.default ? "cursor-default" : "cursor-pointer"}
               `}
@@ -176,35 +176,35 @@ function Pricing() {
 
               {/* Badge */}
               {plan.badge && (
-                <div className="absolute top-6 right-6 bg-emerald-600 text-white text-xs px-4 py-1 rounded-full shadow">
+                <div className="absolute top-6 right-6 bg-[#5100FF] text-white text-xs px-4 py-1 rounded-full shadow">
                   {plan.badge}
                 </div>
               )}
 
               {/* Default Tag */}
               {plan.default && (
-                <div className="absolute top-6 right-6 bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full">
+                <div className="absolute top-6 right-6 bg-white/10 text-slate-300 text-xs px-3 py-1 rounded-full border border-white/10">
                   Default
                 </div>
               )}
 
               {/* Plan Name */}
-              <h3 className="text-xl font-semibold text-gray-800">
+              <h3 className="text-xl font-semibold text-slate-100">
                 {plan.name}
               </h3>
 
               {/* Price */}
               <div className="mt-4">
-                <span className="text-3xl font-bold text-emerald-600">
+                <span className="text-3xl font-bold text-[#A78BFA]">
                   {plan.price}
                 </span>
-                <p className="text-gray-500 mt-1">
+                <p className="text-slate-400 mt-1">
                   {plan.credits} Credits
                 </p>
               </div>
 
               {/* Description */}
-              <p className="text-gray-500 mt-4 text-sm leading-relaxed">
+              <p className="text-slate-400 mt-4 text-sm leading-relaxed">
                 {plan.description}
               </p>
 
@@ -212,8 +212,8 @@ function Pricing() {
               <div className="mt-6 space-y-3 text-left">
                 {plan.features.map((feature, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <FaCheckCircle className="text-emerald-500 text-sm" />
-                    <span className="text-gray-700 text-sm">
+                    <FaCheckCircle className="text-[#8B5CF6] text-sm" />
+                    <span className="text-slate-300 text-sm">
                       {feature}
                     </span>
                   </div>
@@ -231,8 +231,8 @@ function Pricing() {
                       handlePayment(plan)
                     }
                   }} className={`w-full mt-8 py-3 rounded-xl font-semibold transition ${isSelected
-                    ? "bg-emerald-600 text-white hover:opacity-90"
-                    : "bg-gray-100 text-gray-700 hover:bg-emerald-50"
+                    ? "bg-[#5100FF] text-white hover:opacity-90 shadow-[0_0_20px_rgba(81,0,255,0.3)]"
+                    : "bg-white/5 text-slate-300 hover:bg-[#5100FF]/20 border border-white/10"
                     }`}>
                   {loadingPlan === plan.id
                     ? "Processing..."
