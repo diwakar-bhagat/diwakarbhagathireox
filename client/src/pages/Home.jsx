@@ -117,16 +117,18 @@ function Home() {
   ];
 
   return (
-    <div className='min-h-screen bg-base-navy flex flex-col relative text-slate-100 overflow-x-hidden'>
-      {/* Premium SVG Background (Absolute Img Element instead of CSS Background) */}
+    <div className='min-h-screen flex flex-col relative text-slate-100 overflow-x-hidden' style={{ backgroundColor: '#101010' }}>
+      {/* Premium SVG Background — fixed to viewport, z-0 sits above body bg but below content */}
       <img
         src={bgMain}
-        alt="Neon background"
-        className="absolute left-0 top-0 right-0 bottom-0 w-full h-full object-cover -z-10 opacity-90 pointer-events-none"
+        alt=""
+        className="fixed inset-0 w-full h-auto min-h-full object-cover object-top z-0 pointer-events-none select-none"
+        aria-hidden="true"
+        draggable="false"
       />
       <Navbar />
 
-      <div className='flex-1 px-6 py-20'>
+      <div className='flex-1 px-6 py-20 relative z-10'>
         <div className='max-w-6xl mx-auto'>
 
           <div className='flex justify-center mb-6 relative z-10'>
