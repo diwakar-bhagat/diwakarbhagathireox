@@ -21,7 +21,7 @@ import evalImg from "../assets/ai-ans.png";
 import resumeImg from "../assets/resume.png";
 import pdfImg from "../assets/pdf.png";
 import analyticsImg from "../assets/history.png";
-import bgMain from "../assets/bgmain.svg";
+import bgMain from "../assets/bgmain.jpg";
 import Footer from '../components/Footer';
 
 const AuthModel = lazy(() => import('../components/AuthModel'));
@@ -118,16 +118,11 @@ function Home() {
 
   return (
     <div className='min-h-screen bg-base-navy flex flex-col relative text-slate-100 overflow-x-hidden'>
-      {/* Premium Purple Noise Background (Full Visibility) */}
-      <div
-        className="fixed inset-0 z-0 pointer-events-none"
-        style={{
-          backgroundImage: `url(${bgMain})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'top',
-          margin: 0,
-          padding: 0
-        }}
+      {/* Premium Purple Noise Image Background */}
+      <img
+        src={bgMain}
+        alt="Neon background"
+        className="fixed inset-0 w-full h-full object-cover object-top z-0 pointer-events-none"
       />
       <Navbar />
 
