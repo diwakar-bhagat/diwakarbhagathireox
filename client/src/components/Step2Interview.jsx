@@ -571,7 +571,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
         {/* video section */}
         <div className='w-full lg:w-[35%] bg-white dark:bg-slate-900 flex flex-col items-center p-6 space-y-6 border-r border-gray-200 dark:border-slate-800'>
-          <div className='w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-transparent dark:border-slate-700'>
+          <div className='w-full max-w-md aspect-video rounded-2xl overflow-hidden shadow-xl border border-transparent dark:border-slate-700'>
             {videoUnavailable ? (
               <div className="flex aspect-video items-center justify-center bg-[#5100FF]/10 px-6 text-center text-sm font-medium text-[#A78BFA]">
                 AI interviewer is ready. Continue with text and audio prompts.
@@ -581,11 +581,13 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
                 src={videoSource}
                 key={videoSource}
                 ref={videoRef}
+                autoPlay
+                loop
                 muted
                 playsInline
                 preload="metadata"
                 onError={() => setVideoUnavailable(true)}
-                className="w-full h-auto object-cover"
+                className="w-full h-full object-cover scale-[1.04] transform-gpu"
               />
             )}
           </div>
