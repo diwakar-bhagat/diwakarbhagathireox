@@ -41,11 +41,13 @@ const AnswerInput = React.memo(React.forwardRef(({ disabled, value, onChange }, 
 }));
 
 const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTakenRef }) => {
-  const [timeLeft, setTimeLeft] = useState(totalTime || 60);
+  const safeTotalTime = Number.isFinite(Number(totalTime)) && Number(totalTime) > 0
+    ? Number(totalTime)
+    : 60;
+  const [timeLeft, setTimeLeft] = useState(safeTotalTime);
   useEffect(() => {
-    setTimeLeft(totalTime || 60);
     if (parentTimeTakenRef) parentTimeTakenRef.current = 0;
-  }, [totalTime, parentTimeTakenRef]);
+  }, [parentTimeTakenRef]);
   useEffect(() => {
     if (isIntroPhase) return;
     if (timeLeft <= 0) {
@@ -55,13 +57,13 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
     const timerId = setInterval(() => {
       setTimeLeft(prev => {
         const next = prev - 1;
-        if (parentTimeTakenRef) parentTimeTakenRef.current = (totalTime || 60) - next;
+        if (parentTimeTakenRef) parentTimeTakenRef.current = safeTotalTime - next;
         if (next <= 0) clearInterval(timerId);
         return next;
       });
     }, 1000);
     return () => clearInterval(timerId);
-  }, [isIntroPhase, timeLeft, totalTime, parentTimeTakenRef, onTimeUp]);
+  }, [isIntroPhase, timeLeft, safeTotalTime, parentTimeTakenRef, onTimeUp]);
   return <Timer timeLeft={timeLeft} totalTime={totalTime} />;
 }); function Step2Interview({ interviewData, onFinish }) {
   const dispatch = useDispatch()
@@ -141,7 +143,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
     || error?.message
     || fallback;
 
-  const sendAbandonSignal = useCallback(async ({ source = "cleanup", preferBeacon = false } = {}) => {
+  const sendAbandonSignal = useCallback(({ source = "cleanup", preferBeacon = false } = {}) => {
     // Only abandon if we haven't finalized and status is still in progress.
     const isCompletedOrArchived = ["completed", "failed"].includes(interviewData?.status);
     if (!interviewId || hasFinalizedRef.current || isFinishingRef.current || abandonSentRef.current || isCompletedOrArchived) {
@@ -164,17 +166,15 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
     }
 
     if (typeof fetch === "function") {
-      try {
-        await fetch(abandonUrl, {
-          method: "POST",
-          credentials: "include",
-          keepalive: true,
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: payload,
-        });
-      } catch (e) { }
+      fetch(abandonUrl, {
+        method: "POST",
+        credentials: "include",
+        keepalive: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: payload,
+      }).catch(() => {});
     }
   }, [interviewId, interviewData?.status]);
 
@@ -613,7 +613,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
             <div className='flex justify-center'>
 
-              <LocalTimer totalTime={currentQuestion?.timeLimit} onTimeUp={() => {
+              <LocalTimer key={`${currentIndex}-${currentQuestion?.timeLimit || 60}`} totalTime={currentQuestion?.timeLimit} onTimeUp={() => {
                 if (!isSubmittingRef.current && !feedbackRef.current) {
                   submitAnswerRef.current?.();
                 }

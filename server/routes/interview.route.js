@@ -1,7 +1,7 @@
 import express from "express"
 import isAuth from "../middlewares/isAuth.js"
 import { upload, uploadJd } from "../middlewares/multer.js"
-import { abandonInterview, analyzeJd, analyzeResume, attachJdToInterview, finishInterview, generateQuestion, getInterviewReport, getInterviewSession, getMyInterviews, submitAnswer } from "../controllers/interview.controller.js"
+import { abandonInterview, analyzeJd, analyzeResume, attachJdToInterview, deleteInterviewSession, finishInterview, generateQuestion, getInterviewReport, getInterviewSession, getMyInterviews, submitAnswer } from "../controllers/interview.controller.js"
 
 
 
@@ -19,6 +19,7 @@ interviewRouter.post("/:id/abandon",isAuth,abandonInterview)
 
 interviewRouter.get("/get-interview",isAuth,getMyInterviews)
 interviewRouter.get("/session/:id",isAuth,getInterviewSession)
+interviewRouter.delete("/session/:id",isAuth,deleteInterviewSession)
 interviewRouter.get("/report/:id",isAuth,getInterviewReport)
 
 

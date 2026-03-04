@@ -25,6 +25,14 @@ const questionEvidenceSchema = new mongoose.Schema({
   score: { type: Number, default: 0 },
 }, { _id: false });
 
+const skillEvidenceMapItemSchema = new mongoose.Schema({
+  skill: { type: String, default: "" },
+  claimed: { type: Boolean, default: false },
+  demonstrated: { type: Boolean, default: false },
+  jdRequired: { type: Boolean, default: false },
+  evidenceScore: { type: Number, default: 0 },
+}, { _id: false });
+
 const roundMixSchema = new mongoose.Schema({
   roundType: {
     type: String,
@@ -195,10 +203,31 @@ const interviewSchema = new mongoose.Schema({
       computedAt: { type: String, default: "" },
     },
 
+    interviewAnalytics: {
+      confidenceVolatilityIndex: { type: Number, default: 0 },
+      overclaimRatio: { type: Number, default: 0 },
+      buzzwordDensity: { type: Number, default: 0 },
+      exampleDepthScore: { type: Number, default: 0 },
+      hireReadinessProbability: { type: Number, default: 0 },
+      hireRiskLevel: {
+        type: String,
+        enum: ["low", "medium", "high"],
+        default: "high",
+      },
+    },
+
+    skillEvidenceMap: { type: [skillEvidenceMapItemSchema], default: [] },
+
     improvementBlueprint: {
       days: { type: [dayPlanSchema], default: [] },
       topFocus: { type: [String], default: [] },
       generatedAt: { type: String, default: "" },
+    },
+
+    reportGenerationStatus: {
+      type: String,
+      enum: ["not_started", "pending", "ready"],
+      default: "not_started",
     },
 
     startedAt: { type: Date, default: null },

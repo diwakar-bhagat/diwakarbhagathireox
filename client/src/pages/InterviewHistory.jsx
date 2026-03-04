@@ -8,11 +8,14 @@ import Skeleton from '../components/loaders/Skeleton'
 function InterviewHistory() {
     const [interviews, setInterviews] = useState([])
     const [loading, setLoading] = useState(true)
+    const [errorMessage, setErrorMessage] = useState("")
+    const [deletingId, setDeletingId] = useState("")
     const navigate = useNavigate()
 
     useEffect(() => {
         const getMyInterviews = async () => {
             try {
+                setErrorMessage("")
                 const result = await axios.get(ServerUrl + "/api/interview/get-interview", { withCredentials: true })
 
                 setInterviews(result.data)
@@ -28,6 +31,40 @@ function InterviewHistory() {
         getMyInterviews()
 
     }, [])
+
+    const handleDeleteSession = async (event, interviewId, reportGenerationStatus) => {
+        event.stopPropagation()
+
+        if (!interviewId || deletingId) {
+            return
+        }
+
+        if (reportGenerationStatus === "pending") {
+            setErrorMessage("Report generation is still in progress. Try deleting this session again in a moment.")
+            return
+        }
+
+        const confirmed = window.confirm("Delete this interview session permanently? Credits will not be refunded.")
+        if (!confirmed) {
+            return
+        }
+
+        try {
+            setDeletingId(interviewId)
+            setErrorMessage("")
+            await axios.delete(`${ServerUrl}/api/interview/session/${interviewId}`, { withCredentials: true })
+            setInterviews((prev) => prev.filter((item) => item._id !== interviewId))
+        } catch (error) {
+            console.log(error)
+            setErrorMessage(
+                error?.response?.data?.message
+                || error?.message
+                || "Failed to delete interview session."
+            )
+        } finally {
+            setDeletingId("")
+        }
+    }
 
 
     return (
@@ -52,6 +89,12 @@ function InterviewHistory() {
                     </div>
                 </div>
 
+	
+                {errorMessage && (
+                    <div className='mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>
+                        {errorMessage}
+                    </div>
+                )}
 
                 {loading ? (
                     <div className='grid gap-6'>
@@ -83,6 +126,9 @@ function InterviewHistory() {
                     <div className='grid gap-6'>
                         {interviews.map((item, index) => {
                             const isCompleted = item.status === "completed";
+                            const canDelete = item.status === "completed" || item.status === "abandoned";
+                            const deleteBlocked = item.reportGenerationStatus === "pending";
+                            const isDeleting = deletingId === item._id;
                             return (
                             <Motion.div key={index}
                                 initial={{ opacity: 0, y: 10 }}
@@ -126,17 +172,33 @@ function InterviewHistory() {
                                             </p>
                                         </div>
 
-                                        {/* STATUS BADGE */}
-                                        <span
-                                            className={`px-4 py-1 rounded-full text-xs font-medium ${isCompleted
-                                                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-                                                : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"
-                                                }`}
-                                        >
-                                            {isCompleted ? item.status : "resume available"}
-                                        </span>
+                                        <div className='flex items-center gap-3'>
+                                            {canDelete && (
+                                                <button
+                                                    type="button"
+                                                    onClick={(event) => handleDeleteSession(event, item._id, item.reportGenerationStatus)}
+                                                    disabled={isDeleting || deleteBlocked}
+                                                    className={`px-4 py-1 rounded-full text-xs font-medium border transition ${isDeleting || deleteBlocked
+                                                        ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
+                                                        : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300"
+                                                        }`}
+                                                >
+                                                    {isDeleting ? "Deleting..." : deleteBlocked ? "Report Pending" : "Delete"}
+                                                </button>
+                                            )}
 
-
+                                            {/* STATUS BADGE */}
+                                            <span
+                                                className={`px-4 py-1 rounded-full text-xs font-medium ${isCompleted
+                                                    ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                                                    : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"
+                                                    }`}
+                                            >
+                                                {isCompleted ? item.status : "resume available"}
+                                            </span>
+                                        </div>
+	
+	
                                     </div>
                                 </div>
 

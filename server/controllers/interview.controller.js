@@ -766,6 +766,161 @@ const buildSkillHeatmap = (interview) => {
   };
 };
 
+const getNumericBuzzwordDensity = (value) => {
+  const numericValue = Number(value);
+  if (Number.isFinite(numericValue)) {
+    const normalized = numericValue <= 1 ? numericValue * 100 : numericValue;
+    return roundToSingleDecimal(clampPercent(normalized));
+  }
+
+  const normalizedDensity = normalizeBuzzwordDensity(value);
+  if (normalizedDensity === "low") return 20;
+  if (normalizedDensity === "high") return 80;
+  return 50;
+};
+
+const getJdAlignmentScore = (alignmentList) => {
+  const safeAlignment = Array.isArray(alignmentList) ? alignmentList : [];
+  if (!safeAlignment.length) return 0;
+
+  const mappedScores = safeAlignment.map((item) => {
+    if (item?.strength === "strong") return 9;
+    if (item?.strength === "ok") return 6;
+    return 3;
+  });
+
+  return roundToSingleDecimal(
+    mappedScores.reduce((sum, value) => sum + value, 0) / mappedScores.length
+  );
+};
+
+const getStandardDeviation = (values) => {
+  const numericValues = (Array.isArray(values) ? values : [])
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+
+  if (!numericValues.length) return 0;
+  if (numericValues.length === 1) return 0;
+
+  const mean = numericValues.reduce((sum, value) => sum + value, 0) / numericValues.length;
+  const variance = numericValues.reduce((sum, value) => {
+    const delta = value - mean;
+    return sum + (delta * delta);
+  }, 0) / numericValues.length;
+
+  return roundToSingleDecimal(Math.sqrt(variance));
+};
+
+const buildSkillEvidenceMap = (interview, heatmap) => {
+  const safeHeatmap = Array.isArray(heatmap?.skills)
+    ? heatmap.skills
+    : (Array.isArray(interview?.skillHeatmap?.skills) ? interview.skillHeatmap.skills : []);
+
+  return safeHeatmap.map((item) => {
+    const evidenceScores = (Array.isArray(item?.evidence) ? item.evidence : [])
+      .map((evidence) => Number(evidence?.score))
+      .filter((score) => Number.isFinite(score));
+    const averageEvidenceScore = evidenceScores.length
+      ? roundToSingleDecimal(
+          evidenceScores.reduce((sum, score) => sum + score, 0) / evidenceScores.length
+        )
+      : 0;
+
+    let demonstrated = averageEvidenceScore >= 4;
+    if (item?.demonstrated === "ok" || item?.demonstrated === "strong") {
+      demonstrated = true;
+    }
+    if (item?.resume_claimed && averageEvidenceScore < 4) {
+      demonstrated = false;
+    }
+
+    return {
+      skill: normalizeText(item?.skill),
+      claimed: Boolean(item?.resume_claimed),
+      demonstrated,
+      jdRequired: Boolean(item?.jd_required),
+      evidenceScore: roundToSingleDecimal(Math.max(0, Math.min(10, averageEvidenceScore))),
+    };
+  }).filter((item) => item.skill);
+};
+
+const buildInterviewAnalytics = (interview, skillEvidenceMap) => {
+  const safeQuestions = Array.isArray(interview?.questions) ? interview.questions : [];
+  if (!safeQuestions.length) {
+    return null;
+  }
+
+  const confidenceScores = safeQuestions.map((question) =>
+    Number(question?.evaluationRubric?.confidence ?? question?.confidence)
+  );
+  const exampleScores = safeQuestions.map((question) =>
+    Number(question?.evaluationRubric?.example_usage)
+  ).filter((value) => Number.isFinite(value));
+  const clarityScores = safeQuestions.map((question) =>
+    Number(question?.evaluationRubric?.clarity ?? question?.communication)
+  ).filter((value) => Number.isFinite(value));
+  const depthScores = safeQuestions.map((question) =>
+    Number(question?.evaluationRubric?.implementation_depth)
+  ).filter((value) => Number.isFinite(value));
+  const tradeoffScores = safeQuestions.map((question) =>
+    Number(question?.evaluationRubric?.tradeoff_awareness)
+  ).filter((value) => Number.isFinite(value));
+  const jdAlignmentScores = safeQuestions
+    .map((question) => getJdAlignmentScore(question?.evaluationRubric?.jd_alignment))
+    .filter((value) => Number.isFinite(value));
+  const buzzwordDensityScores = safeQuestions
+    .map((question) => getNumericBuzzwordDensity(
+      question?.evaluationRubric?.buzzword_ratio ?? question?.evaluationRubric?.buzzword_density
+    ))
+    .filter((value) => Number.isFinite(value));
+
+  const average = (values) => {
+    const safeValues = (Array.isArray(values) ? values : []).filter((value) => Number.isFinite(value));
+    if (!safeValues.length) return 0;
+    return roundToSingleDecimal(
+      safeValues.reduce((sum, value) => sum + value, 0) / safeValues.length
+    );
+  };
+
+  const claimedSkillsCount = (Array.isArray(skillEvidenceMap) ? skillEvidenceMap : [])
+    .filter((item) => item?.claimed)
+    .length;
+  const demonstratedSkillsCount = (Array.isArray(skillEvidenceMap) ? skillEvidenceMap : [])
+    .filter((item) => item?.claimed && item?.demonstrated)
+    .length;
+  const overclaimRatio = claimedSkillsCount > 0
+    ? roundToSingleDecimal(
+        Math.max(0, (claimedSkillsCount - demonstratedSkillsCount) / claimedSkillsCount)
+      )
+    : 0;
+
+  const weightedReadiness10 =
+    (average(clarityScores) * 0.25) +
+    (average(depthScores) * 0.25) +
+    (average(tradeoffScores) * 0.2) +
+    (average(exampleScores) * 0.15) +
+    (average(jdAlignmentScores) * 0.15);
+  const hireReadinessProbability = roundToSingleDecimal(
+    Math.max(0, Math.min(100, weightedReadiness10 * 10))
+  );
+
+  let hireRiskLevel = "high";
+  if (hireReadinessProbability > 80) {
+    hireRiskLevel = "low";
+  } else if (hireReadinessProbability >= 60) {
+    hireRiskLevel = "medium";
+  }
+
+  return {
+    confidenceVolatilityIndex: getStandardDeviation(confidenceScores),
+    overclaimRatio,
+    buzzwordDensity: average(buzzwordDensityScores),
+    exampleDepthScore: average(exampleScores),
+    hireReadinessProbability,
+    hireRiskLevel,
+  };
+};
+
 const buildImprovementBlueprint = (interview, heatmap) => {
   const safeInterview = interview || {};
   const focusPool = [
@@ -806,6 +961,11 @@ const buildReportPayload = (interview) => {
   const heatmap = interview?.skillHeatmap?.skills?.length
     ? interview.skillHeatmap
     : buildSkillHeatmap(interview);
+  const skillEvidenceMap = Array.isArray(interview?.skillEvidenceMap) && interview.skillEvidenceMap.length
+    ? interview.skillEvidenceMap
+    : buildSkillEvidenceMap(interview, heatmap);
+  const computedInterviewAnalytics = buildInterviewAnalytics(interview, skillEvidenceMap);
+  const interviewAnalytics = computedInterviewAnalytics || interview?.interviewAnalytics || null;
   const blueprint = interview?.improvementBlueprint?.days?.length
     ? interview.improvementBlueprint
     : buildImprovementBlueprint(interview, heatmap);
@@ -855,7 +1015,9 @@ const buildReportPayload = (interview) => {
       tradeoffs: roundToSingleDecimal(metrics.tradeoffs),
       clarity: roundToSingleDecimal(metrics.communication),
     },
+    interviewAnalytics,
     heatmap,
+    skillEvidenceMap,
     questions: (Array.isArray(interview?.questions) ? interview.questions : []).map((item, index) => ({
       index: index + 1,
       text: item.question,
@@ -1954,6 +2116,7 @@ Role: ${interview.role}
 
 
 export const finishInterview = async (req, res) => {
+  let interview = null;
   try {
     const { interviewId } = req.body ?? {}
     const safeInterviewId = typeof interviewId === "string" ? interviewId.trim() : "";
@@ -1962,7 +2125,7 @@ export const finishInterview = async (req, res) => {
       return res.status(400).json({ message: "Interview id is required" });
     }
 
-    const interview = await Interview.findById(safeInterviewId)
+    interview = await Interview.findById(safeInterviewId)
     if (!interview) {
       return res.status(404).json({ message: "failed to find Interview" })
     }
@@ -1970,16 +2133,67 @@ export const finishInterview = async (req, res) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    const metrics = summarizeQuestionMetrics(interview.questions);
-    const heatmap = buildSkillHeatmap(interview);
-    const blueprint = buildImprovementBlueprint(interview, heatmap);
+    if (interview.status === "completed" && interview.reportGenerationStatus === "ready") {
+      const metrics = summarizeQuestionMetrics(interview.questions);
+      const reportPayload = buildReportPayload(interview);
+
+      return res.status(200).json({
+        finalScore: metrics.finalScore,
+        confidence: metrics.confidence,
+        communication: metrics.communication,
+        correctness: metrics.correctness,
+        questionWiseScore: interview.questions.map((q) => ({
+          question: q.question,
+          score: roundToSingleDecimal(q.score || 0),
+          feedback: q.feedback || "",
+          confidence: roundToSingleDecimal(q.confidence || 0),
+          communication: roundToSingleDecimal(q.communication || 0),
+          correctness: roundToSingleDecimal(q.correctness || 0),
+        })),
+        reportPayload,
+        interviewAnalytics: reportPayload.interviewAnalytics,
+        skillEvidenceMap: reportPayload.skillEvidenceMap,
+      });
+    }
+
+    if (interview.reportGenerationStatus === "pending") {
+      return res.status(409).json({ message: "Report generation is already in progress" });
+    }
+
+    interview.reportGenerationStatus = "pending";
+    interview.lastActiveAt = new Date();
+    await interview.save();
+
+    let metrics;
+    let heatmap;
+    let skillEvidenceMap;
+    let interviewAnalytics;
+    let blueprint;
+
+    try {
+      metrics = summarizeQuestionMetrics(interview.questions);
+      heatmap = buildSkillHeatmap(interview);
+      skillEvidenceMap = buildSkillEvidenceMap(interview, heatmap);
+      interviewAnalytics = buildInterviewAnalytics(interview, skillEvidenceMap);
+      blueprint = buildImprovementBlueprint(interview, heatmap);
+    } catch (processingError) {
+      interview.reportGenerationStatus = "not_started";
+      interview.lastActiveAt = new Date();
+      await interview.save().catch(() => {});
+      throw processingError;
+    }
 
     interview.finalScore = metrics.finalScore;
     interview.skillHeatmap = heatmap;
+    interview.skillEvidenceMap = skillEvidenceMap;
+    if (interviewAnalytics) {
+      interview.interviewAnalytics = interviewAnalytics;
+    }
     interview.improvementBlueprint = blueprint;
     interview.status = "completed";
     interview.endedAt = new Date();
     interview.lastActiveAt = interview.endedAt;
+    interview.reportGenerationStatus = "ready";
 
     await interview.save();
 
@@ -1999,6 +2213,8 @@ export const finishInterview = async (req, res) => {
         correctness: roundToSingleDecimal(q.correctness || 0),
       })),
       reportPayload,
+      interviewAnalytics: reportPayload.interviewAnalytics,
+      skillEvidenceMap: reportPayload.skillEvidenceMap,
     })
   } catch (error) {
     console.error("failed to finish Interview", error);
@@ -2011,7 +2227,7 @@ export const getMyInterviews = async (req, res) => {
   try {
     const interviews = await Interview.find({ userId: req.userId })
       .sort({ createdAt: -1 })
-      .select("role experience mode finalScore status createdAt");
+      .select("role experience mode finalScore status createdAt reportGenerationStatus");
 
     return res.status(200).json(interviews)
 
@@ -2104,6 +2320,48 @@ export const abandonInterview = async (req, res) => {
   }
 }
 
+export const deleteInterviewSession = async (req, res) => {
+  try {
+    const interviewId = typeof req.params?.id === "string" ? req.params.id.trim() : "";
+    if (!interviewId) {
+      return res.status(400).json({ message: "Interview id is required" });
+    }
+
+    const interview = await Interview.findById(interviewId);
+    if (!interview) {
+      return res.status(404).json({ message: "Interview not found" });
+    }
+
+    if (!isOwnedInterview(interview, req.userId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    if (interview.reportGenerationStatus === "pending") {
+      return res.status(409).json({ message: "Report generation is still pending" });
+    }
+
+    if (isActiveInterviewStatus(interview.status)) {
+      return res.status(409).json({ message: "Cannot delete an in-progress interview session" });
+    }
+
+    if (interview.status !== "completed" && interview.status !== "abandoned") {
+      return res.status(409).json({ message: "Only completed or abandoned sessions can be deleted" });
+    }
+
+    const reportPdfPath = normalizeText(interview?.reportPdfPath);
+    if (reportPdfPath) {
+      safeUnlinkFile(reportPdfPath);
+    }
+
+    await interview.deleteOne();
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("failed to delete interview session", error);
+    return res.status(500).json({ message: "Failed to delete interview session" });
+  }
+}
+
 export const getInterviewReport = async (req, res) => {
   try {
     const interviewId = typeof req.params?.id === "string" ? req.params.id.trim() : "";
@@ -2144,11 +2402,14 @@ export const getInterviewReport = async (req, res) => {
       plan: reportPayload.plan,
       overall: reportPayload.overall,
       cognitive: reportPayload.cognitive,
+      interviewAnalytics: reportPayload.interviewAnalytics,
       heatmap: reportPayload.heatmap,
+      skillEvidenceMap: reportPayload.skillEvidenceMap,
       questions: reportPayload.questions,
       blueprint: reportPayload.blueprint,
       completionRatePercent: reportPayload.completionRatePercent,
       unansweredQuestions: reportPayload.unansweredQuestions,
+      reportGenerationStatus: interview.reportGenerationStatus || "not_started",
     });
 
   } catch (error) {
