@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion as Motion, AnimatePresence } from "motion/react";
 import {
     FaUserTie,
@@ -20,6 +20,7 @@ import { setResumeData, setJdData, clearWizardData } from '../redux/wizardSlice'
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../utils/firebase';
 import DebugPanel from './DebugPanel';
+import { clearInterviewClientState } from '../utils/interviewSessionReset';
 
 function Step1SetUp({ onStart }) {
     const { userData } = useSelector((state) => state.user);
@@ -43,6 +44,7 @@ function Step1SetUp({ onStart }) {
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [lastApiStatus, setLastApiStatus] = useState("idle");
+    const hasValidatedSessionStateRef = useRef(false);
     const debugEnabled = import.meta.env.VITE_DEBUG === "1"
         || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1");
 
@@ -65,6 +67,51 @@ function Step1SetUp({ onStart }) {
             dispatch(clearWizardData());
         };
     }, [dispatch]);
+
+    useEffect(() => {
+        if (hasValidatedSessionStateRef.current) {
+            return;
+        }
+
+        hasValidatedSessionStateRef.current = true;
+        let disposed = false;
+
+        const validateInterviewState = async () => {
+            if (!userData && !auth.currentUser) {
+                clearInterviewClientState();
+                return;
+            }
+
+            try {
+                const result = await axios.get(ServerUrl + "/api/interview/get-interview", {
+                    withCredentials: true,
+                });
+
+                if (disposed) {
+                    return;
+                }
+
+                const interviews = Array.isArray(result.data) ? result.data : [];
+                const hasActiveSession = interviews.some((item) =>
+                    item?.status === "in_progress"
+                    || item?.status === "abandoned"
+                    || item?.status === "Incompleted"
+                );
+
+                if (!hasActiveSession) {
+                    clearInterviewClientState();
+                }
+            } catch {
+                // Fail closed on server check errors to avoid wiping active state incorrectly.
+            }
+        };
+
+        validateInterviewState();
+
+        return () => {
+            disposed = true;
+        };
+    }, [userData]);
 
     const handleUploadResume = async () => {
         if (!resumeFile || analyzingResume) return;

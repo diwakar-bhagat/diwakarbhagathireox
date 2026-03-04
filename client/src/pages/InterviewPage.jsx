@@ -3,6 +3,7 @@ import axios from "axios";
 import { useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ServerUrl } from '../App';
+import { clearInterviewClientState, setActiveInterviewClientId } from '../utils/interviewSessionReset';
 
 const Step1SetUp = lazy(() => import('../components/Step1SetUp'))
 const Step2Interview = lazy(() => import('../components/Step2Interview'))
@@ -54,10 +55,14 @@ function InterviewPage() {
         }
 
         if (result.data?.status === "completed") {
+          clearInterviewClientState();
           navigate(`/report/${resumeInterviewId}`, { replace: true });
           return;
         }
 
+        if (result.data?.interviewId) {
+          setActiveInterviewClientId(result.data.interviewId);
+        }
         setInterviewData(result.data);
         setStep(2);
       } catch (error) {
@@ -84,6 +89,9 @@ function InterviewPage() {
   }, [appBooting, navigate, resumeInterviewId]);
 
   const handleStart = (data) => {
+    if (data?.interviewId) {
+      setActiveInterviewClientId(data.interviewId);
+    }
     setInterviewData(data);
     setRecoveryError("");
     setStep(2);
@@ -124,6 +132,7 @@ function InterviewPage() {
         {step === 2 && interviewData?.questions?.length > 0 && (
           <Step2Interview interviewData={interviewData}
             onFinish={(report) => {
+              clearInterviewClientState();
               setInterviewData(report);
               setStep(3)
             }}

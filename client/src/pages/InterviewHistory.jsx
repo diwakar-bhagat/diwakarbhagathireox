@@ -7,6 +7,7 @@ import { motion as Motion } from "motion/react"
 import { useDispatch, useSelector } from 'react-redux'
 import { setUserData } from '../redux/userSlice'
 import Skeleton from '../components/loaders/Skeleton'
+import { clearInterviewClientState, getActiveInterviewClientId } from '../utils/interviewSessionReset'
 function InterviewHistory() {
     const dispatch = useDispatch()
     const userData = useSelector((state) => state.user.userData)
@@ -82,6 +83,9 @@ function InterviewHistory() {
             setErrorMessage("")
             const result = await axios.delete(`${ServerUrl}/api/interview/session/${interviewId}`, { withCredentials: true })
             setInterviews((prev) => prev.filter((item) => item._id !== interviewId))
+            if (getActiveInterviewClientId() === interviewId) {
+                clearInterviewClientState()
+            }
             if (userData && Number.isFinite(Number(result?.data?.creditsLeft))) {
                 dispatch(setUserData({
                     ...userData,
