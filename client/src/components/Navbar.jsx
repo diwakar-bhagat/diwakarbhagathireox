@@ -52,13 +52,15 @@ function Navbar() {
   const dispatch = useDispatch();
   const creditPanelRef = useRef(null);
   const userPanelRef = useRef(null);
+  const activityFrameRef = useRef(0);
   const liveStats = useLiveStats();
   const [isNavVisible, setIsNavVisible] = useState(true);
 
   useEffect(() => {
     let timeoutId;
 
-    const handleActivity = () => {
+    const flushActivity = () => {
+      activityFrameRef.current = 0;
       setIsNavVisible(true);
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
@@ -66,14 +68,25 @@ function Navbar() {
       }, 2500);
     };
 
+    const handleActivity = () => {
+      if (activityFrameRef.current) {
+        return;
+      }
+      activityFrameRef.current = window.requestAnimationFrame(flushActivity);
+    };
+
     handleActivity();
 
     window.addEventListener("mousemove", handleActivity);
-    window.addEventListener("scroll", handleActivity);
-    window.addEventListener("touchstart", handleActivity);
+    window.addEventListener("scroll", handleActivity, { passive: true });
+    window.addEventListener("touchstart", handleActivity, { passive: true });
     window.addEventListener("keydown", handleActivity);
 
     return () => {
+      if (activityFrameRef.current) {
+        window.cancelAnimationFrame(activityFrameRef.current);
+        activityFrameRef.current = 0;
+      }
       clearTimeout(timeoutId);
       window.removeEventListener("mousemove", handleActivity);
       window.removeEventListener("scroll", handleActivity);

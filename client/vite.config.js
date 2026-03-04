@@ -19,20 +19,26 @@ export default defineConfig({
           if (
             normalizedId.includes("/node_modules/react/") ||
             normalizedId.includes("/node_modules/react-dom/") ||
-            normalizedId.includes("/node_modules/scheduler/")
+            normalizedId.includes("/node_modules/scheduler/") ||
+            normalizedId.includes("/node_modules/react-router/") ||
+            normalizedId.includes("/node_modules/react-router-dom/") ||
+            normalizedId.includes("/node_modules/@remix-run/router/")
           ) {
-            return "vendor-react";
+            return "react-vendor";
           }
 
-          if (normalizedId.includes("/node_modules/firebase/")) {
-            return "vendor-firebase";
+          if (
+            normalizedId.includes("/node_modules/firebase/") ||
+            normalizedId.includes("/node_modules/@firebase/")
+          ) {
+            return "firebase";
           }
 
           if (
             normalizedId.includes("/node_modules/motion/") ||
             normalizedId.includes("/node_modules/motion-dom/")
           ) {
-            return "vendor-motion";
+            return "motion";
           }
 
           if (
@@ -40,15 +46,23 @@ export default defineConfig({
             normalizedId.includes("/node_modules/react-redux/") ||
             normalizedId.includes("/node_modules/redux/")
           ) {
-            return "vendor-redux";
+            return "redux";
           }
 
           if (
-            normalizedId.includes("/node_modules/react-router/") ||
-            normalizedId.includes("/node_modules/react-router-dom/") ||
-            normalizedId.includes("/node_modules/@remix-run/router/")
+            normalizedId.includes("/node_modules/jspdf/") ||
+            normalizedId.includes("/node_modules/jspdf-autotable/") ||
+            normalizedId.includes("/node_modules/html2canvas/")
           ) {
-            return "vendor-router";
+            return "pdf";
+          }
+
+          if (
+            normalizedId.includes("/node_modules/recharts/") ||
+            normalizedId.includes("/node_modules/react-circular-progressbar/") ||
+            normalizedId.includes("/node_modules/d3-")
+          ) {
+            return "charts";
           }
 
           if (normalizedId.includes("/node_modules/react-icons/")) {

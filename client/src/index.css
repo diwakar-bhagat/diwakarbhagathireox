@@ -31,10 +31,10 @@ html.dark body {
   color: #e2e8f0;
 }
 
-html.theme-transition *,
-html.theme-transition *::before,
-html.theme-transition *::after {
-  transition-property: background-color, border-color, color, fill, stroke, box-shadow, opacity;
+html.theme-transition body,
+html.theme-transition .theme-surface,
+html.theme-transition .glass-card {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
   transition-duration: 620ms;
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -118,7 +118,12 @@ html.theme-transition *::after {
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    transition: all 300ms cubic-bezier(0, 0, 0.2, 1);
+    transition: transform 160ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out;
+  }
+
+  .gpu-accelerated {
+    transform: translate3d(0, 0, 0);
+    will-change: transform, opacity;
   }
 
   .glass-card:hover {
@@ -156,6 +161,13 @@ html.theme-transition *::after {
   @media (prefers-reduced-motion: reduce) {
     .circuit-pulse {
       animation: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .glass-card {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
   }
 }
