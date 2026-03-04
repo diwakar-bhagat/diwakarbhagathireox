@@ -389,10 +389,16 @@ function Step3Report({ report }) {
 
   return (
     <div className='min-h-screen bg-base-navy px-4 sm:px-6 lg:px-10 py-8 transition-colors duration-300 relative overflow-hidden'>
-      {/* Circuit Grid Pulse Background */}
+      {/* Premium Purple Noise Background (Full Visibility) */}
       <div
-        className="absolute inset-0 z-0 pointer-events-none opacity-20 circuit-pulse"
-        style={{ backgroundImage: `url(${bgMain})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundImage: `url(${bgMain})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'top',
+          margin: 0,
+          padding: 0
+        }}
       />
 
       <div className='mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative z-10'>

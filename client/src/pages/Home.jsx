@@ -118,10 +118,16 @@ function Home() {
 
   return (
     <div className='min-h-screen bg-base-navy flex flex-col relative text-slate-100 overflow-x-hidden'>
-      {/* Circuit Grid Pulse Background */}
+      {/* Premium Purple Noise Background (Full Visibility) */}
       <div
-        className="absolute inset-0 z-0 pointer-events-none opacity-40 circuit-pulse"
-        style={{ backgroundImage: `url(${bgMain})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundImage: `url(${bgMain})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'top',
+          margin: 0,
+          padding: 0
+        }}
       />
       <Navbar />
 
