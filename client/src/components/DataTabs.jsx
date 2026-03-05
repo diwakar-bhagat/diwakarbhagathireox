@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function DataTabs({ tabs = [] }) {
     const [activeTab, setActiveTab] = useState(0);
+    const MotionDiv = motion.div;
 
     if (!tabs || tabs.length === 0) return null;
 
@@ -18,7 +19,7 @@ export default function DataTabs({ tabs = [] }) {
                             }`}
                     >
                         {activeTab === idx && (
-                            <motion.div
+                            <MotionDiv
                                 layoutId="tab-indicator"
                                 className="absolute inset-0 bg-white/10 rounded-xl"
                                 initial={false}
@@ -33,7 +34,7 @@ export default function DataTabs({ tabs = [] }) {
             {/* Tab Content Panel */}
             <div className="relative w-full">
                 <AnimatePresence mode="wait">
-                    <motion.div
+                    <MotionDiv
                         key={activeTab}
                         initial={{ opacity: 0, scale: 0.98, filter: "blur(4px)" }}
                         animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
@@ -42,7 +43,7 @@ export default function DataTabs({ tabs = [] }) {
                         className="w-full"
                     >
                         {tabs[activeTab].content}
-                    </motion.div>
+                    </MotionDiv>
                 </AnimatePresence>
             </div>
         </div>

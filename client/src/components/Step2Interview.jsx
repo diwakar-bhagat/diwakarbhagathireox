@@ -97,7 +97,9 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voiceGender, setVoiceGender] = useState("female");
   const [subtitle, setSubtitle] = useState("");
+  const [introGreeting, setIntroGreeting] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [sessionStatus, setSessionStatus] = useState(interviewData?.status || "in_progress");
   const [lastApiStatus, setLastApiStatus] = useState("idle");
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const debugEnabled = import.meta.env.VITE_DEBUG === "1"
@@ -105,6 +107,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
 
   const videoRef = useRef(null);
+  const isSessionActive = sessionStatus === "in_progress" || sessionStatus === "Incompleted";
 
   const currentQuestion = dynamicQuestions[currentIndex];
   const currentQuestionRef = useRef(currentQuestion);
@@ -130,6 +133,12 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
   userNameRef.current = userName;
   questionsLengthRef.current = dynamicQuestions.length;
 
+  useEffect(() => {
+    if (interviewData?.status) {
+      setSessionStatus(interviewData.status);
+    }
+  }, [interviewData?.status]);
+
   const yieldToBrowser = () => new Promise((resolve) => {
     if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") {
       resolve();
@@ -145,7 +154,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
   const sendAbandonSignal = useCallback(({ source = "cleanup", preferBeacon = false } = {}) => {
     // Only abandon if we haven't finalized and status is still in progress.
-    const isCompletedOrArchived = ["completed", "failed"].includes(interviewData?.status);
+    const isCompletedOrArchived = ["completed", "failed", "abandoned"].includes(sessionStatus);
     if (!interviewId || hasFinalizedRef.current || isFinishingRef.current || abandonSentRef.current || isCompletedOrArchived) {
       return;
     }
@@ -176,7 +185,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
         body: payload,
       }).catch(() => {});
     }
-  }, [interviewId, interviewData?.status]);
+  }, [interviewId, sessionStatus]);
 
 
   useEffect(() => {
@@ -234,8 +243,12 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
   /* ---------------- SPEAK FUNCTION ---------------- */
   const speakText = (text) => {
     return new Promise((resolve) => {
-      if (!window.speechSynthesis || !selectedVoice) {
-        resolve();
+      if (!window.speechSynthesis) {
+        setSubtitle(text);
+        setTimeout(() => {
+          setSubtitle("");
+          resolve();
+        }, 1200);
         return;
       }
 
@@ -248,7 +261,9 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
       const utterance = new SpeechSynthesisUtterance(humanText);
 
-      utterance.voice = selectedVoice;
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
 
       // Human-like pacing
       utterance.rate = 0.92;     // slightly slower than normal
@@ -295,6 +310,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
   useEffect(() => {
     const runIntro = async () => {
       if (isIntroPhase) {
+        setIntroGreeting(`Hi ${userNameRef.current}, welcome to your mock interview.`);
         await speakTextRef.current?.(
           `Hi ${userNameRef.current}, it's great to meet you today. I hope you're feeling confident and ready.`
         );
@@ -303,6 +319,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
           "I'll ask you a few questions. Just answer naturally, and take your time. Let's begin."
         );
 
+        setIntroGreeting("");
         setIsIntroPhase(false)
       } else if (currentQuestionRef.current) {
         if (announcedQuestionIndexRef.current === currentIndex) {
@@ -405,6 +422,10 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
 
   const submitAnswer = async () => {
+    if (!isSessionActive) {
+      setErrorMessage("Session is not active");
+      return;
+    }
     if (isSubmitting) return;
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
@@ -448,6 +469,23 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
     } catch (error) {
       const status = error?.response?.status || "error";
       setLastApiStatus(`submit:${status}`)
+<<<<<<< ours
+<<<<<<< ours
+=======
+=======
+>>>>>>> theirs
+      const backendError = error?.response?.data?.error;
+      const backendStatus = error?.response?.data?.status;
+      if (backendError === "SESSION_NOT_ACTIVE" || backendStatus === "abandoned") {
+        setSessionStatus(backendStatus || "abandoned");
+<<<<<<< ours
+        setErrorMessage("");
+        return;
+      }
+>>>>>>> theirs
+=======
+      }
+>>>>>>> theirs
       setErrorMessage(resolveErrorMessage(error, "Failed to submit answer"));
       console.log(error)
     } finally {
@@ -458,6 +496,10 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
   submitAnswerRef.current = submitAnswer;
 
   const handleNext = async () => {
+    if (!isSessionActive) {
+      setErrorMessage("Session is not active");
+      return;
+    }
     setErrorMessage("");
     setLastApiStatus("next:local");
     answerInputRef.current?.setValue("");
@@ -537,6 +579,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
     if (!debugEnabled) return;
     console.log("[interview-step-debug]", {
       interviewId,
+      sessionStatus,
       currentIndex,
       questionLength: dynamicQuestions.length,
       lastApiStatus,
@@ -551,6 +594,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
     debugEnabled,
     dynamicQuestions.length,
     interviewId,
+    sessionStatus,
     isIntroPhase,
     isMicOn,
     isSubmitting,
@@ -571,7 +615,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
         {/* video section */}
         <div className='w-full lg:w-[35%] bg-white dark:bg-slate-900 flex flex-col items-center p-6 space-y-6 border-r border-gray-200 dark:border-slate-800'>
-          <div className='w-full max-w-md aspect-video rounded-2xl overflow-hidden shadow-xl border border-transparent dark:border-slate-700'>
+          <div className='w-full max-w-md rounded-2xl overflow-hidden shadow-xl border border-transparent dark:border-slate-700'>
             {videoUnavailable ? (
               <div className="flex aspect-video items-center justify-center bg-[#5100FF]/10 px-6 text-center text-sm font-medium text-[#A78BFA]">
                 AI interviewer is ready. Continue with text and audio prompts.
@@ -581,13 +625,11 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
                 src={videoSource}
                 key={videoSource}
                 ref={videoRef}
-                autoPlay
-                loop
                 muted
                 playsInline
                 preload="metadata"
                 onError={() => setVideoUnavailable(true)}
-                className="w-full h-full object-cover scale-[1.04] transform-gpu"
+                className="w-full h-auto object-cover"
               />
             )}
           </div>
@@ -614,12 +656,17 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
             <div className="h-px bg-gray-200 dark:bg-slate-700"></div>
 
             <div className='flex justify-center'>
-
-              <LocalTimer key={`${currentIndex}-${currentQuestion?.timeLimit || 60}`} totalTime={currentQuestion?.timeLimit} onTimeUp={() => {
-                if (!isSubmittingRef.current && !feedbackRef.current) {
-                  submitAnswerRef.current?.();
-                }
-              }} isIntroPhase={isIntroPhase} parentTimeTakenRef={timeTakenRef} />
+              {isSessionActive ? (
+                <LocalTimer key={`${currentIndex}-${currentQuestion?.timeLimit || 60}`} totalTime={currentQuestion?.timeLimit} onTimeUp={() => {
+                  if (!isSubmittingRef.current && !feedbackRef.current && isSessionActive) {
+                    submitAnswerRef.current?.();
+                  }
+                }} isIntroPhase={isIntroPhase} parentTimeTakenRef={timeTakenRef} />
+              ) : (
+                <div className='text-sm font-medium text-amber-600 dark:text-amber-400'>
+                  Session not active
+                </div>
+              )}
             </div>
 
             <div className="h-px bg-gray-200 dark:bg-slate-700"></div>
@@ -670,8 +717,18 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
             </div>
           )}
 
+<<<<<<< ours
 
-          {!isIntroPhase && (<div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>
+          {isIntroPhase ? (
+            <div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>
+              <p className='text-xs sm:text-sm text-gray-400 dark:text-gray-500 mb-2'>
+                Getting Started
+              </p>
+              <p className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 leading-relaxed'>
+                {introGreeting || `Hi ${userName || "there"}, welcome to your interview.`}
+              </p>
+            </div>
+          ) : (<div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>
             <p className='text-xs sm:text-sm text-gray-400 dark:text-gray-500 mb-2'>
               Question {currentIndex + 1} of {dynamicQuestions.length}
             </p>
@@ -683,53 +740,85 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
                     Tested: {skill}
                   </span>
                 ))}
+=======
+          {isSessionActive && (
+            isIntroPhase ? (
+              <div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>
+                <p className='text-xs sm:text-sm text-gray-400 dark:text-gray-500 mb-2'>
+                  Getting Started
+                </p>
+                <p className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 leading-relaxed'>
+                  {introGreeting || `Hi ${userName || "there"}, welcome to your interview.`}
+                </p>
+>>>>>>> theirs
               </div>
-            )}
+            ) : (
+              <div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>
+                <p className='text-xs sm:text-sm text-gray-400 dark:text-gray-500 mb-2'>
+                  Question {currentIndex + 1} of {dynamicQuestions.length}
+                </p>
 
-            <Motion.div
-              key={currentIndex}
-              initial={{ opacity: 0, x: 5 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 leading-relaxed'
-            >
-              {currentQuestion?.question}
-            </Motion.div>
-
-            {SHOW_AGENT_CHIPS && agentMeta && (
-              <Motion.div
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-                className='flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200/50 dark:border-slate-700/50'
-              >
-                {agentMeta.strategy && (
-                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] rounded-full border border-[#5100FF]/20 flex items-center gap-1 capitalize'>
-                    <IoSparkles size={10} className="hidden sm:inline" />
-                    {agentMeta.strategy.replace(/_/g, " ")}
-                  </span>
+                {currentQuestion?.taggedSkills?.length > 0 && (
+                  <div className='flex flex-wrap gap-1.5 mb-3'>
+                    {currentQuestion.taggedSkills.map((skill, i) => (
+                      <span key={i} className='text-[10px] sm:text-[11px] font-medium bg-gray-200/50 text-gray-600 dark:bg-slate-700/50 dark:text-slate-300 px-2 py-0.5 rounded-md border border-gray-300/50 dark:border-slate-600/50'>
+                        Tested: {skill}
+                      </span>
+                    ))}
+                  </div>
                 )}
-                {agentMeta.difficulty && (
-                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] rounded-full border border-[#5100FF]/20'>
-                    Diff: L{agentMeta.difficulty}
-                  </span>
+
+                <Motion.div
+                  key={currentIndex}
+                  initial={{ opacity: 0, x: 5 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 leading-relaxed'
+                >
+                  {currentQuestion?.question}
+                </Motion.div>
+
+                {SHOW_AGENT_CHIPS && agentMeta && (
+                  <Motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    className='flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200/50 dark:border-slate-700/50'
+                  >
+                    {agentMeta.strategy && (
+                      <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] rounded-full border border-[#5100FF]/20 flex items-center gap-1 capitalize'>
+                        <IoSparkles size={10} className="hidden sm:inline" />
+                        {agentMeta.strategy.replace(/_/g, " ")}
+                      </span>
+                    )}
+                    {agentMeta.difficulty && (
+                      <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] rounded-full border border-[#5100FF]/20'>
+                        Diff: L{agentMeta.difficulty}
+                      </span>
+                    )}
+                    {agentMeta.weakness?.length > 0 && (
+                      <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] rounded-full border border-[#5100FF]/20 capitalize'>
+                        Focus: {agentMeta.weakness.join(", ")}
+                      </span>
+                    )}
+                  </Motion.div>
                 )}
-                {agentMeta.weakness?.length > 0 && (
-                  <span className='px-2.5 py-1 text-[10px] sm:text-xs font-medium bg-[#5100FF]/10 text-[#A78BFA] rounded-full border border-[#5100FF]/20 capitalize'>
-                    Focus: {agentMeta.weakness.join(", ")}
-                  </span>
-                )}
-              </Motion.div>
-            )}
-          </div>)
-          }
-          <AnswerInput
-            ref={answerInputRef}
-            disabled={isSubmitting || !!feedback}
-          />
+              </div>
+            )
+          )}
+          {!isSessionActive ? (
+            <div className='mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900'>
+              Interview was abandoned. Resume it from History.
+            </div>
+          ) : (
+            <AnswerInput
+              ref={answerInputRef}
+              disabled={isSubmitting || !!feedback}
+            />
+          )}
 
 
-          {!feedback ? (
+          {isSessionActive && !feedback ? (
             <div className='mt-6 space-y-3'>
               <div className='flex items-center gap-4'>
                 <Motion.button
@@ -753,7 +842,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
                 <AIThinkingIndicator className='w-full justify-center' />
               )}
             </div>
-          ) : (
+          ) : (isSessionActive && feedback ? (
             <Motion.div
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
@@ -792,7 +881,7 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
                 Next Question <BsArrowRight size={18} />
               </button>
             </Motion.div>
-          )}
+          ) : null)}
         </div>
       </div>
 

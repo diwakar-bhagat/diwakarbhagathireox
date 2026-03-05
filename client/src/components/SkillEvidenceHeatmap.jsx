@@ -7,7 +7,19 @@ const getCellColor = (strength) => {
     return 'bg-[#C4B5FD]/30'; // Weak evidence
 };
 
+const hashToRange = (value, min, max) => {
+    const text = String(value || "");
+    let hash = 0;
+    for (let i = 0; i < text.length; i += 1) {
+        hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+    }
+    const range = max - min + 1;
+    return min + (hash % range);
+};
+
 export default function SkillEvidenceHeatmap({ skills = [] }) {
+    const MotionDiv = motion.div;
+
     // Normalize skills based on multiple possible backend structs
     const normalizedSkills = useMemo(() => {
         if (!skills || !Array.isArray(skills) || skills.length === 0) {
@@ -21,11 +33,12 @@ export default function SkillEvidenceHeatmap({ skills = [] }) {
         }
 
         return skills.map(s => {
+            const normalizedName = s?.name || s?.label || String(s);
             // Automatically fake evidencePoints if the backend just returns raw objects or flat values
-            const ep = s.evidencePoints || (s.score ? [{ strength: s.score * 10 }] : [{ strength: Math.random() * 50 + 40 }]);
+            const ep = s.evidencePoints || (s.score ? [{ strength: s.score * 10 }] : [{ strength: hashToRange(normalizedName, 40, 90) }]);
             return {
-                name: s.name || s.label || s,
-                requiredByJD: !!s.requiredByJD || Math.random() > 0.5,
+                name: normalizedName,
+                requiredByJD: Boolean(s?.requiredByJD ?? s?.jdRequired ?? s?.required ?? false),
                 evidencePoints: ep
             };
         });
@@ -44,7 +57,7 @@ export default function SkillEvidenceHeatmap({ skills = [] }) {
 
                 <div className="flex-1 flex gap-1 h-6 items-center">
                     {skill.evidencePoints.map((point, index) => (
-                        <motion.div
+                        <MotionDiv
                             key={index}
                             initial={{ scaleX: 0 }}
                             animate={{ scaleX: 1 }}

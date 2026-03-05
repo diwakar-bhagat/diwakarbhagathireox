@@ -9,6 +9,9 @@ const Step1SetUp = lazy(() => import('../components/Step1SetUp'))
 const Step2Interview = lazy(() => import('../components/Step2Interview'))
 const Step3Report = lazy(() => import('../components/Step3Report'))
 
+const isActiveStatus = (status) => status === "in_progress" || status === "Incompleted";
+const isCompletedStatus = (status) => status === "completed";
+
 function InterviewPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,7 +49,7 @@ function InterviewPage() {
       setRecoveryError("");
 
       try {
-        const result = await axios.get(`${ServerUrl}/api/interview/session/${resumeInterviewId}`, {
+        const result = await axios.get(`${ServerUrl}/api/interview/session/${resumeInterviewId}?resume=1`, {
           withCredentials: true,
         });
 
@@ -54,16 +57,43 @@ function InterviewPage() {
           return;
         }
 
-        if (result.data?.status === "completed") {
+        const data = result.data;
+        const status = data?.status;
+
+        if (isCompletedStatus(status)) {
           clearInterviewClientState();
           navigate(`/report/${resumeInterviewId}`, { replace: true });
           return;
         }
 
-        if (result.data?.interviewId) {
-          setActiveInterviewClientId(result.data.interviewId);
+        if (!isActiveStatus(status)) {
+          clearInterviewClientState();
+          navigate("/history", {
+            replace: true,
+            state: {
+              toast: "This interview is not active. Resume or delete it from History.",
+            },
+          });
+          return;
         }
-        setInterviewData(result.data);
+
+        if (!Array.isArray(data?.questions) || data.questions.length === 0) {
+          clearInterviewClientState();
+          navigate("/history", {
+            replace: true,
+            state: {
+              toast: "Session data is unavailable. Resume from History.",
+            },
+          });
+          return;
+        }
+
+        const idToStore = data?.interviewId || data?._id;
+        if (idToStore) {
+          setActiveInterviewClientId(idToStore);
+        }
+
+        setInterviewData(data);
         setStep(2);
       } catch (error) {
         if (isDisposed) {
@@ -89,10 +119,15 @@ function InterviewPage() {
   }, [appBooting, navigate, resumeInterviewId]);
 
   const handleStart = (data) => {
-    if (data?.interviewId) {
-      setActiveInterviewClientId(data.interviewId);
+    const normalizedData = {
+      ...data,
+      status: data?.status || "in_progress",
+    };
+    const idToStore = normalizedData?.interviewId || normalizedData?._id;
+    if (idToStore) {
+      setActiveInterviewClientId(idToStore);
     }
-    setInterviewData(data);
+    setInterviewData(normalizedData);
     setRecoveryError("");
     setStep(2);
   };
@@ -117,7 +152,7 @@ function InterviewPage() {
           <Step1SetUp onStart={handleStart} />
         )}
 
-        {step === 2 && (!interviewData?.questions || interviewData.questions.length === 0) && (
+        {step === 2 && (!interviewData?.questions || interviewData.questions.length === 0 || !isActiveStatus(interviewData?.status)) && (
           <div className='mx-auto max-w-2xl px-4 pt-20 text-center'>
             <div className='glass-card p-8'>
               <h2 className='text-xl font-bold text-slate-100'>Session Interrupted</h2>
@@ -129,7 +164,7 @@ function InterviewPage() {
           </div>
         )}
 
-        {step === 2 && interviewData?.questions?.length > 0 && (
+        {step === 2 && interviewData?.questions?.length > 0 && isActiveStatus(interviewData?.status) && (
           <Step2Interview interviewData={interviewData}
             onFinish={(report) => {
               clearInterviewClientState();

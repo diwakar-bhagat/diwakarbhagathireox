@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import axios from "axios"
 import { ServerUrl } from '../App'
 import { FaArrowLeft } from 'react-icons/fa'
@@ -17,6 +17,7 @@ function InterviewHistory() {
     const [deletingId, setDeletingId] = useState("")
     const [deleteTarget, setDeleteTarget] = useState(null)
     const navigate = useNavigate()
+    const location = useLocation()
 
     useEffect(() => {
         const getMyInterviews = async () => {
@@ -37,6 +38,15 @@ function InterviewHistory() {
         getMyInterviews()
 
     }, [])
+
+    useEffect(() => {
+        const toast = typeof location.state?.toast === "string" ? location.state.toast : "";
+        if (!toast) {
+            return;
+        }
+        setErrorMessage(toast);
+        navigate(location.pathname, { replace: true, state: {} });
+    }, [location.pathname, location.state, navigate]);
 
     const handleDeleteRequest = (event, item) => {
         event.stopPropagation()

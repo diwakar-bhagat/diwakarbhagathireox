@@ -1618,6 +1618,7 @@ export const generateQuestion = async (req, res) => {
           : null;
 
         return res.status(409).json({
+          error: "EXISTING_SESSION",
           message: activeAgeMs !== null && activeAgeMs <= ACTIVE_INTERVIEW_DEBOUNCE_MS
             ? "Interview start already in progress. Resume it from History or abandon it first."
             : "You already have an active interview. Resume it from History or abandon it first.",
@@ -1888,10 +1889,18 @@ export const submitAnswer = async (req, res) => {
       return res.status(403).json({ message: "Forbidden" });
     }
     if (interview.status === "completed") {
-      return res.status(400).json({ message: "Interview already completed" });
+      return res.status(409).json({
+        error: "SESSION_NOT_ACTIVE",
+        status: interview.status,
+        message: "Interview already completed",
+      });
     }
     if (interview.status === "abandoned") {
-      return res.status(409).json({ message: "Interview was abandoned. Resume it from History before submitting." });
+      return res.status(409).json({
+        error: "SESSION_NOT_ACTIVE",
+        status: interview.status,
+        message: "Interview was abandoned. Resume it from History before submitting.",
+      });
     }
     if (questionIndex >= interview.questions.length) {
       return res.status(400).json({ message: "Invalid question index" });
@@ -2255,9 +2264,35 @@ export const getInterviewSession = async (req, res) => {
     }
 
     const user = await User.findById(req.userId).select("name");
-    if (interview.status === "abandoned" || interview.status === "Incompleted") {
+    const resumeRequested = String(req.query?.resume || "").toLowerCase() === "1"
+      || String(req.query?.resume || "").toLowerCase() === "true";
+
+    if (interview.status === "completed") {
+      return res.status(200).json({
+        interviewId: String(interview._id),
+        userName: user?.name || "",
+        questions: interview.questions,
+        currentIndex: Math.max(0, interview.questions.length - 1),
+        status: interview.status,
+        role: interview.role,
+        experience: interview.experience,
+        mode: interview.mode,
+      });
+    }
+
+    if ((interview.status === "abandoned" || interview.status === "Incompleted") && resumeRequested) {
       interview.status = "in_progress";
     }
+
+    if (interview.status !== "in_progress") {
+      return res.status(403).json({
+        error: "SESSION_NOT_ACTIVE",
+        interviewId: String(interview._id),
+        status: interview.status,
+        message: "This interview session is not active.",
+      });
+    }
+
     interview.lastActiveAt = new Date();
     await interview.save();
 

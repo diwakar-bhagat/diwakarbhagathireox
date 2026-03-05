@@ -227,6 +227,13 @@ function Step1SetUp({ onStart }) {
         } catch (error) {
             const status = error?.response?.status || "error";
             setLastApiStatus(`start:${status}`);
+            const backendError = error?.response?.data?.error;
+            if (status === 409 && backendError === "EXISTING_SESSION") {
+                setErrorMessage("You already have an unfinished interview.");
+                setLoading(false);
+                navigate("/history");
+                return;
+            }
             setErrorMessage(resolveErrorMessage(error, "Failed to start interview"));
             console.error(error);
             setLoading(false);
