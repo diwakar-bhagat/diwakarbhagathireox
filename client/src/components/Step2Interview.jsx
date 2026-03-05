@@ -260,7 +260,7 @@ function Step2Interview({ interviewData, onFinish }) {
   const speakText = (text) => {
     return new Promise((resolve) => {
       const speechSynthesis = getSpeechSynthesis();
-      if (!speechSynthesis || typeof window.SpeechSynthesisUtterance !== "function") {
+      if (!speechSynthesis || !window.SpeechSynthesisUtterance) {
         setSubtitle(text);
         setTimeout(() => {
           setSubtitle("");
