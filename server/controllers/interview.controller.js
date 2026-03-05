@@ -446,9 +446,9 @@ const buildAtsMatch = ({ resumeAnalysis, jdAnalysis, gapAnalysis }) => {
 
   const matchedMustHaves = Array.isArray(safeJd.required_skills)
     ? safeJd.required_skills.filter((item) => {
-        const normalized = normalizeText(item).toLowerCase();
-        return normalized && !normalizedGap.missingRequiredSkills.map((skill) => skill.toLowerCase()).includes(normalized);
-      })
+      const normalized = normalizeText(item).toLowerCase();
+      return normalized && !normalizedGap.missingRequiredSkills.map((skill) => skill.toLowerCase()).includes(normalized);
+    })
     : [];
 
   const weakEvidenceSkills = normalizedGap.weakMatches.slice(0, 5).map((skill) => ({
@@ -618,8 +618,8 @@ const normalizeSessionState = (sessionState, questions) => {
     question_history: Array.isArray(safeState.question_history)
       ? safeState.question_history
       : questions
-          .map((item) => (typeof item?.question === "string" ? item.question.trim() : ""))
-          .filter(Boolean),
+        .map((item) => (typeof item?.question === "string" ? item.question.trim() : ""))
+        .filter(Boolean),
     focus_areas: Array.isArray(safeState.focus_areas) ? safeState.focus_areas : [],
     last_strategy: typeof safeState.last_strategy === "string" ? safeState.last_strategy.trim() : "",
   };
@@ -704,8 +704,8 @@ const buildSkillHeatmap = (interview) => {
           : false;
         const alignment = Array.isArray(question?.evaluationRubric?.jd_alignment)
           ? question.evaluationRubric.jd_alignment.find(
-              (item) => normalizeText(item?.skill).toLowerCase() === normalizedSkill
-            )
+            (item) => normalizeText(item?.skill).toLowerCase() === normalizedSkill
+          )
           : null;
 
         if (!taggedMatch && !alignment) {
@@ -822,8 +822,8 @@ const buildSkillEvidenceMap = (interview, heatmap) => {
       .filter((score) => Number.isFinite(score));
     const averageEvidenceScore = evidenceScores.length
       ? roundToSingleDecimal(
-          evidenceScores.reduce((sum, score) => sum + score, 0) / evidenceScores.length
-        )
+        evidenceScores.reduce((sum, score) => sum + score, 0) / evidenceScores.length
+      )
       : 0;
 
     let demonstrated = averageEvidenceScore >= 4;
@@ -890,8 +890,8 @@ const buildInterviewAnalytics = (interview, skillEvidenceMap) => {
     .length;
   const overclaimRatio = claimedSkillsCount > 0
     ? roundToSingleDecimal(
-        Math.max(0, (claimedSkillsCount - demonstratedSkillsCount) / claimedSkillsCount)
-      )
+      Math.max(0, (claimedSkillsCount - demonstratedSkillsCount) / claimedSkillsCount)
+    )
     : 0;
 
   const weightedReadiness10 =
@@ -1273,23 +1273,23 @@ Return valid JSON only. No markdown.
     : null;
   const rawPlan = hasResumeContext
     ? buildInterviewPlan({
-        role: role || jd.target_role,
-        experience,
-        resumeAnalysis,
-        jdGapResult: gapAnalysis,
-      })
+      role: role || jd.target_role,
+      experience,
+      resumeAnalysis,
+      jdGapResult: gapAnalysis,
+    })
     : null;
   const interviewPlan = rawPlan
     ? normalizeInterviewPlan({
-        ...rawPlan,
-        targetRole: role || jd.roleTitle || jd.target_role,
-        experienceLevel: experience || resumeAnalysis?.experience || "Unknown",
-        focusAreas: gapAnalysis?.focusAreas || rawPlan.interview_focus_areas || [],
-        tags: [
-          ...(gapAnalysis?.focusAreas || []).slice(0, 3),
-          ...(gapAnalysis?.missingRequiredSkills || []).slice(0, 2),
-        ],
-      })
+      ...rawPlan,
+      targetRole: role || jd.roleTitle || jd.target_role,
+      experienceLevel: experience || resumeAnalysis?.experience || "Unknown",
+      focusAreas: gapAnalysis?.focusAreas || rawPlan.interview_focus_areas || [],
+      tags: [
+        ...(gapAnalysis?.focusAreas || []).slice(0, 3),
+        ...(gapAnalysis?.missingRequiredSkills || []).slice(0, 2),
+      ],
+    })
     : null;
 
   return {
@@ -1617,11 +1617,18 @@ export const generateQuestion = async (req, res) => {
           ? Date.now() - referenceTime.getTime()
           : null;
 
+        const statusMessages = {
+          abandoned: "You have an abandoned session. Resume or delete it from History to start a new one.",
+          Incompleted: "You have an incomplete session. Resume or delete it from History.",
+          in_progress: activeAgeMs !== null && activeAgeMs <= ACTIVE_INTERVIEW_DEBOUNCE_MS
+            ? "Interview start already in progress. Resume it from History or abandon it first."
+            : "You already have an active session in progress. Resume it from History.",
+        };
+
         return res.status(409).json({
           error: "EXISTING_SESSION",
-          message: activeAgeMs !== null && activeAgeMs <= ACTIVE_INTERVIEW_DEBOUNCE_MS
-            ? "Interview start already in progress. Resume it from History or abandon it first."
-            : "You already have an active interview. Resume it from History or abandon it first.",
+          message: statusMessages[existingActiveInterview.status]
+            || "You already have an unfinished session. Resume or delete it from History.",
           interviewId: String(existingActiveInterview._id),
           status: existingActiveInterview.status,
         });
@@ -1654,11 +1661,11 @@ export const generateQuestion = async (req, res) => {
 
     const normalizedJdAnalysis = hasJdSignal(jdAnalysis)
       ? normalizeJdAnalysis({
-          parsed: jdAnalysis,
-          sourceType: jdAnalysis?.sourceType || "text",
-          extractedTextPreview: jdAnalysis?.jdText || jdAnalysis?.extractedTextPreview || "",
-          ocrStatus: jdAnalysis?.ocrStatus || "enabled",
-        })
+        parsed: jdAnalysis,
+        sourceType: jdAnalysis?.sourceType || "text",
+        extractedTextPreview: jdAnalysis?.jdText || jdAnalysis?.extractedTextPreview || "",
+        ocrStatus: jdAnalysis?.ocrStatus || "enabled",
+      })
       : null;
 
     const computedGapAnalysis = normalizedJdAnalysis
@@ -1667,10 +1674,10 @@ export const generateQuestion = async (req, res) => {
     const normalizedGapAnalysis = computedGapAnalysis || normalizeGapAnalysis(gapAnalysis);
     const normalizedAtsMatch = normalizedJdAnalysis
       ? normalizeAtsMatch(atsMatch, {
-          resumeAnalysis: normalizedResumeAnalysis,
-          jdAnalysis: normalizedJdAnalysis,
-          gapAnalysis: normalizedGapAnalysis,
-        })
+        resumeAnalysis: normalizedResumeAnalysis,
+        jdAnalysis: normalizedJdAnalysis,
+        gapAnalysis: normalizedGapAnalysis,
+      })
       : normalizeAtsMatch(atsMatch);
 
     const computedInterviewPlan = buildInterviewPlan({
@@ -2188,7 +2195,7 @@ export const finishInterview = async (req, res) => {
     } catch (processingError) {
       interview.reportGenerationStatus = "not_started";
       interview.lastActiveAt = new Date();
-      await interview.save().catch(() => {});
+      await interview.save().catch(() => { });
       throw processingError;
     }
 
@@ -2412,7 +2419,7 @@ export const deleteInterviewSession = async (req, res) => {
         await interview.save();
       } catch (error) {
         user.credits += CREDIT_COST_PER_INTERVIEW;
-        await user.save().catch(() => {});
+        await user.save().catch(() => { });
         throw error;
       }
     }
@@ -2424,11 +2431,11 @@ export const deleteInterviewSession = async (req, res) => {
     } catch (error) {
       if (creditsDeducted) {
         user.credits += CREDIT_COST_PER_INTERVIEW;
-        await user.save().catch(() => {});
+        await user.save().catch(() => { });
 
         interview.creditsCharged = previousCreditsCharged;
         interview.chargedAt = previousChargedAt;
-        await interview.save().catch(() => {});
+        await interview.save().catch(() => { });
       }
       throw error;
     }

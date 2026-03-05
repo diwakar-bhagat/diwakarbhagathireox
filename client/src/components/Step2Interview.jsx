@@ -65,7 +65,14 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
     return () => clearInterval(timerId);
   }, [isIntroPhase, timeLeft, safeTotalTime, parentTimeTakenRef, onTimeUp]);
   return <Timer timeLeft={timeLeft} totalTime={totalTime} />;
-}); function Step2Interview({ interviewData, onFinish }) {
+});
+
+function Step2Interview({ interviewData, onFinish }) {
+  const getSpeechSynthesis = () =>
+    (typeof window !== "undefined" && "speechSynthesis" in window)
+      ? window.speechSynthesis
+      : null;
+
   const dispatch = useDispatch()
   const aiThinking = useSelector((state) => state.ui.aiThinking)
   const userData = useSelector((state) => state.user.userData)
@@ -124,6 +131,9 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
   const hasFinalizedRef = useRef(false);
   const abandonSentRef = useRef(false);
   const isFinishingRef = useRef(false);
+  const sendAbandonSignalRef = useRef(null);
+  const isMountedRef = useRef(true);
+  const abandonTimerRef = useRef(null);
 
   currentQuestionRef.current = currentQuestion;
   isMicOnRef.current = isMicOn;
@@ -183,15 +193,17 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
           "Content-Type": "application/json",
         },
         body: payload,
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [interviewId, sessionStatus]);
+  sendAbandonSignalRef.current = sendAbandonSignal;
 
 
   useEffect(() => {
     const loadVoices = () => {
-      if (!window.speechSynthesis) return;
-      const voices = window.speechSynthesis.getVoices();
+      const speechSynthesis = getSpeechSynthesis();
+      if (!speechSynthesis) return;
+      const voices = speechSynthesis.getVoices();
       if (!voices.length) return;
 
       // Try known female voices first
@@ -228,11 +240,15 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
     };
 
     loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
+    const speechSynthesis = getSpeechSynthesis();
+    if (speechSynthesis) {
+      speechSynthesis.onvoiceschanged = loadVoices;
+    }
 
     return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.onvoiceschanged = null;
+      const cleanupSpeechSynthesis = getSpeechSynthesis();
+      if (cleanupSpeechSynthesis) {
+        cleanupSpeechSynthesis.onvoiceschanged = null;
       }
     };
   }, [])
@@ -243,7 +259,8 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
   /* ---------------- SPEAK FUNCTION ---------------- */
   const speakText = (text) => {
     return new Promise((resolve) => {
-      if (!window.speechSynthesis) {
+      const speechSynthesis = getSpeechSynthesis();
+      if (!speechSynthesis || typeof window.SpeechSynthesisUtterance !== "function") {
         setSubtitle(text);
         setTimeout(() => {
           setSubtitle("");
@@ -252,14 +269,14 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
         return;
       }
 
-      window.speechSynthesis.cancel();
+      speechSynthesis.cancel();
 
       // Add natural pauses after commas and periods
       const humanText = text
         .replace(/,/g, ", ... ")
         .replace(/\./g, ". ... ");
 
-      const utterance = new SpeechSynthesisUtterance(humanText);
+      const utterance = new window.SpeechSynthesisUtterance(humanText);
 
       if (selectedVoice) {
         utterance.voice = selectedVoice;
@@ -275,20 +292,21 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
         stopMic()
         const playAttempt = videoRef.current?.play();
         if (playAttempt?.catch) {
-          playAttempt.catch(() => {
+          playAttempt.catch((err) => {
+            if (err.name === "NotAllowedError" || err.name === "AbortError") {
+              // Ignore these as they are standard browser auto-play preventions and not hard media failures
+              return;
+            }
             setVideoUnavailable(true);
           });
         }
       };
 
 
-      utterance.onend = () => {
+      const cleanupAndResolve = () => {
         videoRef.current?.pause();
-        videoRef.current.currentTime = 0;
+        if (videoRef.current) videoRef.current.currentTime = 0;
         setIsAIPlaying(false);
-
-
-
         if (isMicOn) {
           startMic();
         }
@@ -298,10 +316,13 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
         }, 300);
       };
 
+      utterance.onend = cleanupAndResolve;
+      utterance.onerror = cleanupAndResolve;
+
 
       setSubtitle(text);
 
-      window.speechSynthesis.speak(utterance);
+      speechSynthesis.speak(utterance);
     });
   };
   speakTextRef.current = speakText;
@@ -469,23 +490,13 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
     } catch (error) {
       const status = error?.response?.status || "error";
       setLastApiStatus(`submit:${status}`)
-<<<<<<< ours
-<<<<<<< ours
-=======
-=======
->>>>>>> theirs
       const backendError = error?.response?.data?.error;
       const backendStatus = error?.response?.data?.status;
       if (backendError === "SESSION_NOT_ACTIVE" || backendStatus === "abandoned") {
         setSessionStatus(backendStatus || "abandoned");
-<<<<<<< ours
         setErrorMessage("");
         return;
       }
->>>>>>> theirs
-=======
-      }
->>>>>>> theirs
       setErrorMessage(resolveErrorMessage(error, "Failed to submit answer"));
       console.log(error)
     } finally {
@@ -539,17 +550,19 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
 
   // Auto-submit logic handled by LocalTimer onTimeUp
 
+  // Browser-level exit signals (beforeunload / pagehide)
+  // Uses ref so the effect never re-registers when sendAbandonSignal changes identity
   useEffect(() => {
     if (typeof window === "undefined") {
       return undefined;
     }
 
     const handleBeforeUnload = () => {
-      sendAbandonSignal({ source: "beforeunload", preferBeacon: true });
+      sendAbandonSignalRef.current?.({ source: "beforeunload", preferBeacon: true });
     };
 
     const handlePageHide = () => {
-      sendAbandonSignal({ source: "pagehide", preferBeacon: true });
+      sendAbandonSignalRef.current?.({ source: "pagehide", preferBeacon: true });
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -559,21 +572,39 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("pagehide", handlePageHide);
     };
-  }, [sendAbandonSignal]);
+  }, []);
 
+  // Track genuine mount state
+  useEffect(() => {
+    isMountedRef.current = true;
+    // Cancel any pending abandon timer from a previous Strict Mode unmount simulation
+    if (abandonTimerRef.current) {
+      clearTimeout(abandonTimerRef.current);
+      abandonTimerRef.current = null;
+    }
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Synchronous cleanup (mic, speech, AI thinking) — safe to run on any unmount
   useEffect(() => {
     return () => {
-      sendAbandonSignal({ source: "unmount" });
-
       if (recognitionRef.current) {
         recognitionRef.current.stop();
         recognitionRef.current.abort();
       }
-
-      window.speechSynthesis.cancel();
-      dispatch(setAiThinking(false))
+      const speechSynthesis = getSpeechSynthesis();
+      if (speechSynthesis) {
+        speechSynthesis.cancel();
+      }
+      dispatch(setAiThinking(false));
     };
-  }, [dispatch, sendAbandonSignal]);
+  }, [dispatch]);
+
+  // NOTE: We intentionally do NOT send an abandon signal on unmount.
+  // React Strict Mode and effect re-registration cause false unmounts that
+  // prematurely abandon the session. Real exits are caught by beforeunload/pagehide above.
 
   useEffect(() => {
     if (!debugEnabled) return;
@@ -717,30 +748,6 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
             </div>
           )}
 
-<<<<<<< ours
-
-          {isIntroPhase ? (
-            <div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>
-              <p className='text-xs sm:text-sm text-gray-400 dark:text-gray-500 mb-2'>
-                Getting Started
-              </p>
-              <p className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 leading-relaxed'>
-                {introGreeting || `Hi ${userName || "there"}, welcome to your interview.`}
-              </p>
-            </div>
-          ) : (<div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>
-            <p className='text-xs sm:text-sm text-gray-400 dark:text-gray-500 mb-2'>
-              Question {currentIndex + 1} of {dynamicQuestions.length}
-            </p>
-
-            {currentQuestion?.taggedSkills?.length > 0 && (
-              <div className='flex flex-wrap gap-1.5 mb-3'>
-                {currentQuestion.taggedSkills.map((skill, i) => (
-                  <span key={i} className='text-[10px] sm:text-[11px] font-medium bg-gray-200/50 text-gray-600 dark:bg-slate-700/50 dark:text-slate-300 px-2 py-0.5 rounded-md border border-gray-300/50 dark:border-slate-600/50'>
-                    Tested: {skill}
-                  </span>
-                ))}
-=======
           {isSessionActive && (
             isIntroPhase ? (
               <div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>
@@ -750,7 +757,6 @@ const LocalTimer = React.memo(({ totalTime, onTimeUp, isIntroPhase, parentTimeTa
                 <p className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 leading-relaxed'>
                   {introGreeting || `Hi ${userName || "there"}, welcome to your interview.`}
                 </p>
->>>>>>> theirs
               </div>
             ) : (
               <div className='relative mb-6 bg-gray-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden'>

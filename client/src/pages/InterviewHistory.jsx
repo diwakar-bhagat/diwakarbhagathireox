@@ -39,14 +39,52 @@ function InterviewHistory() {
 
     }, [])
 
+    const [toastMessage, setToastMessage] = useState("")
+    const [startingFresh, setStartingFresh] = useState(false)
+
     useEffect(() => {
         const toast = typeof location.state?.toast === "string" ? location.state.toast : "";
         if (!toast) {
             return;
         }
-        setErrorMessage(toast);
+        setToastMessage(toast);
         navigate(location.pathname, { replace: true, state: {} });
     }, [location.pathname, location.state, navigate]);
+
+    const handleStartFresh = async () => {
+        if (startingFresh) return;
+        setStartingFresh(true);
+        setErrorMessage("");
+        try {
+            // Find all blocking sessions and delete them
+            const unfinishedSessions = interviews.filter((item) =>
+                item?.status === "in_progress"
+                || item?.status === "abandoned"
+                || item?.status === "Incompleted"
+            );
+
+            for (const session of unfinishedSessions) {
+                if (session?._id) {
+                    await axios.delete(`${ServerUrl}/api/interview/session/${session._id}`, { withCredentials: true });
+                    setInterviews((prev) => prev.filter((item) => item._id !== session._id));
+                    if (getActiveInterviewClientId() === session._id) {
+                        clearInterviewClientState();
+                    }
+                }
+            }
+            setToastMessage("");
+            navigate("/interview", { replace: true, state: {} });
+        } catch (error) {
+            console.log(error);
+            setErrorMessage(
+                error?.response?.data?.message
+                || error?.message
+                || "Failed to clear unfinished session."
+            );
+        } finally {
+            setStartingFresh(false);
+        }
+    }
 
     const handleDeleteRequest = (event, item) => {
         event.stopPropagation()
@@ -139,8 +177,24 @@ function InterviewHistory() {
                 </div>
 
 
+                {toastMessage && (
+                    <div className='mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3'>
+                        <div className='flex-1'>
+                            <p className='text-sm font-medium text-amber-200'>{toastMessage}</p>
+                            <p className='text-xs text-amber-300/70 mt-1'>Resume the session below, or delete it to start fresh.</p>
+                        </div>
+                        <button
+                            onClick={handleStartFresh}
+                            disabled={startingFresh}
+                            className='shrink-0 px-5 py-2 rounded-xl text-sm font-semibold bg-amber-500/20 text-amber-200 border border-amber-500/30 hover:bg-amber-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed'
+                        >
+                            {startingFresh ? "Clearing..." : "Start Fresh"}
+                        </button>
+                    </div>
+                )}
+
                 {errorMessage && (
-                    <div className='mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>
+                    <div className='mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300'>
                         {errorMessage}
                     </div>
                 )}

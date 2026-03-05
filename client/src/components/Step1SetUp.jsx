@@ -194,6 +194,34 @@ function Step1SetUp({ onStart }) {
         }
         if (!role || !resumeAnalysis) return;
 
+        try {
+            const existingResult = await axios.get(ServerUrl + "/api/interview/get-interview", {
+                withCredentials: true,
+            });
+            const interviews = Array.isArray(existingResult.data) ? existingResult.data : [];
+            const unfinished = interviews.find((item) =>
+                item?.status === "in_progress"
+                || item?.status === "abandoned"
+                || item?.status === "Incompleted"
+            );
+
+            if (unfinished?._id) {
+                setLastApiStatus("start:blocked");
+                const statusMsg = unfinished.status === "abandoned"
+                    ? "You have an abandoned session. Resume or delete it from History to start a new one."
+                    : unfinished.status === "Incompleted"
+                        ? "You have an incomplete session. Resume or delete it from History."
+                        : "You already have an active session in progress. Resume it from History.";
+                setErrorMessage(statusMsg);
+                navigate("/history", {
+                    state: { toast: statusMsg },
+                });
+                return;
+            }
+        } catch {
+            // Let backend remain authoritative if pre-check fails.
+        }
+
         setErrorMessage("");
         setLastApiStatus("start:pending");
         setLoading(true);
@@ -228,10 +256,18 @@ function Step1SetUp({ onStart }) {
             const status = error?.response?.status || "error";
             setLastApiStatus(`start:${status}`);
             const backendError = error?.response?.data?.error;
+            const sessionStatus = error?.response?.data?.status || "";
             if (status === 409 && backendError === "EXISTING_SESSION") {
-                setErrorMessage("You already have an unfinished interview.");
+                const statusMsg = sessionStatus === "abandoned"
+                    ? "You have an abandoned session. Resume or delete it from History to start a new one."
+                    : sessionStatus === "Incompleted"
+                        ? "You have an incomplete session. Resume or delete it from History."
+                        : "You already have an active session in progress. Resume it from History.";
+                setErrorMessage(statusMsg);
                 setLoading(false);
-                navigate("/history");
+                navigate("/history", {
+                    state: { toast: statusMsg },
+                });
                 return;
             }
             setErrorMessage(resolveErrorMessage(error, "Failed to start interview"));

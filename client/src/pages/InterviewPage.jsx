@@ -68,11 +68,14 @@ function InterviewPage() {
 
         if (!isActiveStatus(status)) {
           clearInterviewClientState();
+          const statusToast = status === "abandoned"
+            ? "This session was abandoned. Resume or delete it from History."
+            : status === "completed"
+              ? "This interview is already completed."
+              : "This interview is not active. Resume or delete it from History.";
           navigate("/history", {
             replace: true,
-            state: {
-              toast: "This interview is not active. Resume or delete it from History.",
-            },
+            state: { toast: statusToast },
           });
           return;
         }
@@ -99,6 +102,14 @@ function InterviewPage() {
         if (isDisposed) {
           return;
         }
+
+        // If it's a 404, it means the session was deleted (like after Start Fresh).
+        if (error?.response?.status === 404) {
+          clearInterviewClientState();
+          navigate(location.pathname, { replace: true, state: {} });
+          return;
+        }
+
         setRecoveryError(
           error?.response?.data?.message
           || error?.message
@@ -116,7 +127,7 @@ function InterviewPage() {
     return () => {
       isDisposed = true;
     };
-  }, [appBooting, navigate, resumeInterviewId]);
+  }, [appBooting, location.pathname, navigate, resumeInterviewId]);
 
   const handleStart = (data) => {
     const normalizedData = {
