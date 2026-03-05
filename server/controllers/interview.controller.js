@@ -12,6 +12,7 @@ const isOwnedInterview = (interview, userId) =>
 const CREDIT_COST_PER_INTERVIEW = 50;
 const ACTIVE_INTERVIEW_STATUSES = ["Incompleted", "in_progress", "abandoned"];
 const ACTIVE_INTERVIEW_DEBOUNCE_MS = 15000;
+const STALE_SESSION_MS = 30 * 60 * 1000; // 30 minutes
 
 const isActiveInterviewStatus = (status) => ACTIVE_INTERVIEW_STATUSES.includes(status);
 
@@ -1606,21 +1607,22 @@ export const generateQuestion = async (req, res) => {
     }).sort({ updatedAt: -1, createdAt: -1 });
 
     if (existingActiveInterview) {
-      if (Boolean(autoAbandonActive)) {
+      const referenceTime = existingActiveInterview.lastActiveAt
+        || existingActiveInterview.updatedAt
+        || existingActiveInterview.createdAt;
+      const activeAgeMs = referenceTime instanceof Date
+        ? Date.now() - referenceTime.getTime()
+        : Infinity;
+
+      // Auto-abandon stale sessions (>30 min inactive) so the user isn't permanently blocked
+      if (Boolean(autoAbandonActive) || activeAgeMs > STALE_SESSION_MS) {
         markInterviewAbandoned(existingActiveInterview);
         await existingActiveInterview.save();
       } else {
-        const referenceTime = existingActiveInterview.lastActiveAt
-          || existingActiveInterview.updatedAt
-          || existingActiveInterview.createdAt;
-        const activeAgeMs = referenceTime instanceof Date
-          ? Date.now() - referenceTime.getTime()
-          : null;
-
         const statusMessages = {
           abandoned: "You have an abandoned session. Resume or delete it from History to start a new one.",
           Incompleted: "You have an incomplete session. Resume or delete it from History.",
-          in_progress: activeAgeMs !== null && activeAgeMs <= ACTIVE_INTERVIEW_DEBOUNCE_MS
+          in_progress: activeAgeMs <= ACTIVE_INTERVIEW_DEBOUNCE_MS
             ? "Interview start already in progress. Resume it from History or abandon it first."
             : "You already have an active session in progress. Resume it from History.",
         };

@@ -43,6 +43,7 @@ function Step1SetUp({ onStart }) {
 
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+    const [blockingSessionId, setBlockingSessionId] = useState("");
     const [lastApiStatus, setLastApiStatus] = useState("idle");
     const hasValidatedSessionStateRef = useRef(false);
     const debugEnabled = import.meta.env.VITE_DEBUG === "1"
@@ -178,6 +179,22 @@ function Step1SetUp({ onStart }) {
             setLastApiStatus("jd:200");
             dispatch(setJdData(result.data));
         } catch (error) {
+            // Retry once on network error (handles Render cold-start timeouts)
+            if (!error?.response) {
+                try {
+                    await new Promise((r) => setTimeout(r, 2000));
+                    const retryResult = await axios.post(ServerUrl + "/api/interview/analyze-jd", formdata, { withCredentials: true });
+                    setLastApiStatus("jd:200");
+                    dispatch(setJdData(retryResult.data));
+                    return;
+                } catch (retryError) {
+                    const retryStatus = retryError?.response?.status || "error";
+                    setLastApiStatus(`jd:${retryStatus}`);
+                    setErrorMessage(resolveErrorMessage(retryError, "Failed to analyze JD"));
+                    console.log("Failed to analyze JD (retry)", retryError);
+                    return;
+                }
+            }
             const status = error?.response?.status || "error";
             setLastApiStatus(`jd:${status}`);
             setErrorMessage(resolveErrorMessage(error, "Failed to analyze JD"));
@@ -194,34 +211,7 @@ function Step1SetUp({ onStart }) {
         }
         if (!role || !resumeAnalysis) return;
 
-        try {
-            const existingResult = await axios.get(ServerUrl + "/api/interview/get-interview", {
-                withCredentials: true,
-            });
-            const interviews = Array.isArray(existingResult.data) ? existingResult.data : [];
-            const unfinished = interviews.find((item) =>
-                item?.status === "in_progress"
-                || item?.status === "abandoned"
-                || item?.status === "Incompleted"
-            );
-
-            if (unfinished?._id) {
-                setLastApiStatus("start:blocked");
-                const statusMsg = unfinished.status === "abandoned"
-                    ? "You have an abandoned session. Resume or delete it from History to start a new one."
-                    : unfinished.status === "Incompleted"
-                        ? "You have an incomplete session. Resume or delete it from History."
-                        : "You already have an active session in progress. Resume it from History.";
-                setErrorMessage(statusMsg);
-                navigate("/history", {
-                    state: { toast: statusMsg },
-                });
-                return;
-            }
-        } catch {
-            // Let backend remain authoritative if pre-check fails.
-        }
-
+        // No frontend pre-check — the backend is the single source of truth
         setErrorMessage("");
         setLastApiStatus("start:pending");
         setLoading(true);
@@ -247,7 +237,6 @@ function Step1SetUp({ onStart }) {
             if (result.data?.user) {
                 dispatch(setUserData(result.data.user));
             } else if (result.data?.creditsLeft !== undefined) {
-                // Guaranteed fallback update even if user payload misses
                 dispatch(setUserData({ ...userData, credits: result.data.creditsLeft }));
             }
             setLoading(false);
@@ -256,18 +245,15 @@ function Step1SetUp({ onStart }) {
             const status = error?.response?.status || "error";
             setLastApiStatus(`start:${status}`);
             const backendError = error?.response?.data?.error;
-            const sessionStatus = error?.response?.data?.status || "";
-            if (status === 409 && backendError === "EXISTING_SESSION") {
-                const statusMsg = sessionStatus === "abandoned"
-                    ? "You have an abandoned session. Resume or delete it from History to start a new one."
-                    : sessionStatus === "Incompleted"
-                        ? "You have an incomplete session. Resume or delete it from History."
-                        : "You already have an active session in progress. Resume it from History.";
-                setErrorMessage(statusMsg);
+            const blockingId = error?.response?.data?.interviewId;
+
+            // If backend says there's an existing session, offer inline clear-and-retry
+            if (status === 409 && backendError === "EXISTING_SESSION" && blockingId) {
+                setErrorMessage(
+                    error?.response?.data?.message || "You have an unfinished session."
+                );
+                setBlockingSessionId(blockingId);
                 setLoading(false);
-                navigate("/history", {
-                    state: { toast: statusMsg },
-                });
                 return;
             }
             setErrorMessage(resolveErrorMessage(error, "Failed to start interview"));
@@ -535,7 +521,29 @@ function Step1SetUp({ onStart }) {
 
                     {errorMessage && (
                         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                            {errorMessage}
+                            <p>{errorMessage}</p>
+                            {blockingSessionId && (
+                                <button
+                                    type="button"
+                                    disabled={loading}
+                                    onClick={async () => {
+                                        setLoading(true);
+                                        setErrorMessage("");
+                                        try {
+                                            await axios.delete(`${ServerUrl}/api/interview/session/${blockingSessionId}`, { withCredentials: true });
+                                            setBlockingSessionId("");
+                                            // Retry starting the interview
+                                            await handleStart();
+                                        } catch (err) {
+                                            setErrorMessage(resolveErrorMessage(err, "Failed to clear session. Try deleting it from History."));
+                                            setLoading(false);
+                                        }
+                                    }}
+                                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-red-700 transition disabled:opacity-50"
+                                >
+                                    {loading ? "Clearing…" : "Clear & Start Fresh"}
+                                </button>
+                            )}
                         </div>
                     )}
 
